@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest-viewer.json">
+    <meta name="theme-color" content="#0f1626">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <title>Unified Student Learning Hub</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+    <script>
+        localforage.config({
+            name: 'StudentLearningHub',
+            storeName: 'hub_data'
+        });
+    </script>
+
+<script>
+        // Synchronized Database Configuration
+        localforage.config({
+            name: 'UnifiedLearningHub_SharedDB',
+            storeName: 'shared_hub_data'
+        });
+
+        // Fixed Service Worker Chain
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                if (location.protocol === 'http:' || location.protocol === 'https:') {
+                    navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('PWA Service Worker Linked!'))
+                    .catch(err => console.error('PWA Registration failed:', err));
+                }
+            });
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-color: #070b13;
+            --panel-bg: #0f1626;
+            --panel-border: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-cyan: #38bdf8;
+            --amber-border: #f59e0b;
+        }
+
+        #app-ror * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        #app-ror { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+
+        #app-ror header { background-color: var(--panel-bg); border-bottom: 2px solid var(--panel-border); padding: 0.75rem 1rem; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); }
+        #app-ror .header-container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.75rem; align-items: center; }
+        @media (min-width: 768px) { #app-ror .header-container { flex-direction: row; justify-content: space-between; } }
+        #app-ror .logo-section { display: flex; align-items: center; gap: 0.75rem; width: 100%; }
+        @media (min-width: 768px) { #app-ror .logo-section { width: auto; } }
+        #app-ror .logo-icon { background-color: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 0.75rem; padding: 0.5rem; color: var(--accent-cyan); display: flex; align-items: center; justify-content: center; }
+        #app-ror .logo-title h1 { font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; letter-spacing: -0.025em; }
+        #app-ror .badge-colreg { font-size: 0.65rem; background-color: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: var(--accent-cyan); padding: 0.1rem 0.4rem; border-radius: 1rem; font-weight: 700; }
+        #app-ror .logo-title p { font-size: 0.7rem; color: var(--text-muted); margin-top: 1px; }
+
+        #app-ror .tabs-container { background-color: rgba(0, 0, 0, 0.4); border: 1px solid var(--panel-border); border-radius: 0.75rem; padding: 0.25rem; display: flex; flex-wrap: wrap; width: 100%; }
+        @media (min-width: 768px) { #app-ror .tabs-container { width: auto; flex-wrap: nowrap; } }
+        #app-ror .tab-btn { background: none; border: none; color: var(--text-muted); padding: 0.6rem 0.85rem; font-size: 0.8rem; font-weight: 700; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s ease; flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.35rem; }
+        #app-ror .tab-btn:hover { color: var(--text-main); }
+        #app-ror .tab-btn.active { background-color: #0284c7; color: white; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4); }
+
+        #app-ror main { flex-grow: 1; max-width: 1200px; width: 100%; margin: 0 auto; padding: 1rem; }
+        #app-ror .info-banner { background-color: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.2); color: #bae6fd; padding: 0.75rem; border-radius: 0.75rem; font-size: 0.8rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; line-height: 1.4; }
+
+        #app-ror .deck-header { background-color: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 1rem; padding: 0.75rem; margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
+        @media (min-width: 768px) { #app-ror .deck-header { flex-direction: row; align-items: center; justify-content: space-between; } }
+        #app-ror .sets-scroll { display: flex; align-items: center; gap: 0.35rem; overflow-x: auto; padding-bottom: 0.25rem; width: 100%; }
+        #app-ror .sets-scroll span { font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #64748b; letter-spacing: 0.05em; margin-right: 0.25rem; white-space: nowrap; }
+        #app-ror .set-selector-btn { background: none; border: 1px solid transparent; color: var(--text-muted); padding: 0.4rem 0.75rem; border-radius: 0.5rem; font-size: 0.75rem; font-weight: 700; white-space: nowrap; cursor: pointer; transition: all 0.2s; }
+        #app-ror .set-selector-btn:hover { color: var(--text-main); background-color: rgba(255, 255, 255, 0.03); }
+        #app-ror .set-selector-btn.active { background-color: rgba(56, 189, 248, 0.1); color: var(--accent-cyan); border-color: rgba(56, 189, 248, 0.25); }
+
+        #app-ror .deck-actions-wrapper { display: flex; flex-wrap: wrap; gap: 0.5rem; width: 100%; justify-content: flex-end; }
+        @media (min-width: 768px) { #app-ror .deck-actions-wrapper { width: auto; } }
+        #app-ror .action-icon-btn { background-color: rgba(255, 255, 255, 0.04); border: 1px solid var(--panel-border); color: var(--text-muted); padding: 0.4rem 0.75rem; border-radius: 0.5rem; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 0.35rem; transition: all 0.2s; font-weight: 600; }
+        #app-ror .action-icon-btn:hover { color: white; background-color: rgba(255, 255, 255, 0.08); }
+        #app-ror .action-icon-btn svg { vertical-align: middle; }
+
+        #app-ror .cards-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; justify-items: center; align-items: center; width: 100%; }
+        @media (min-width: 640px) { #app-ror .cards-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 1024px) { #app-ror .cards-grid { grid-template-columns: repeat(3, 1fr); } }
+
+        #app-ror .card-perspective { perspective: 1000px; width: 100%; height: 440px; max-width: 310px; }
+        #app-ror .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; cursor: pointer; }
+        #app-ror .card-inner.flipped { transform: rotateY(180deg); }
+        #app-ror .card-front, #app-ror .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; padding: 1.25rem; box-shadow: 0 10px 20px rgba(0,0,0,0.5); overflow: hidden; }
+        #app-ror .card-front { background-color: #020203; border: 4px solid var(--amber-border); }
+        #app-ror .card-front::before { content: ''; position: absolute; inset: 6px; border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 0.9rem; pointer-events: none; }
+        #app-ror .card-back { background-color: var(--panel-bg); border: 4px solid var(--accent-cyan); transform: rotateY(180deg); }
+        #app-ror .card-back::before { content: ''; position: absolute; inset: 6px; border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 0.9rem; pointer-events: none; }
+
+        #app-ror .lights-layer { position: relative; flex-grow: 1; width: 100%; }
+        #app-ror .light-bulb { position: absolute; width: 18px; height: 18px; border-radius: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; }
+        #app-ror .light-bulb::after { content: ''; width: 6px; height: 6px; background-color: white; border-radius: 50%; }
+        #app-ror .light-red { background-color: #ef4444; box-shadow: 0 0 24px 10px rgba(239, 68, 68, 0.85); }
+        #app-ror .light-green { background-color: #10b981; box-shadow: 0 0 24px 10px rgba(16, 185, 129, 0.85); }
+        #app-ror .light-white { background-color: #f1f5f9; box-shadow: 0 0 24px 10px rgba(241, 245, 249, 0.85); }
+        #app-ror .light-yellow { background-color: #eab308; box-shadow: 0 0 24px 10px rgba(234, 179, 8, 0.85); }
+        @keyframes flashAnimation { 0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 0.2; transform: translate(-50%, -50%) scale(0.85); } }
+        #app-ror .light-flash-red { background-color: #ef4444; box-shadow: 0 0 24px 10px rgba(239, 68, 68, 0.85); animation: flashAnimation 1.2s infinite; }
+        #app-ror .light-flash-yellow { background-color: #eab308; box-shadow: 0 0 24px 10px rgba(234, 179, 8, 0.85); animation: flashAnimation 1.2s infinite; }
+        
+        #app-ror .rule-btn { background-color: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #fcd34d; padding: 0.2rem 0.5rem; border-radius: 0.25rem; font-family: monospace; font-weight: bold; font-size: 0.75rem; cursor: pointer; z-index: 20; transition: background-color 0.2s, color 0.2s; }
+        #app-ror .rule-btn:hover { background-color: rgba(245, 158, 11, 0.4); color: white; }
+        #app-ror .card-footer-info { display: flex; align-items: center; justify-content: space-between; font-size: 0.7rem; color: rgba(245, 158, 11, 0.7); border-top: 1px solid rgba(245, 158, 11, 0.1); padding-top: 0.5rem; z-index: 10; }
+
+       #app-ror .card-back-content { display: flex; flex-direction: column; justify-content: flex-start; height: 100%; gap: 1rem; z-index: 10; overflow-y: auto; padding-right: 0.5rem; text-align: left; }
+        #app-ror .card-back-content::-webkit-scrollbar { width: 5px; }
+        #app-ror .card-back-content::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 4px; }
+        #app-ror .card-back-content::-webkit-scrollbar-thumb { background: var(--accent-cyan); border-radius: 4px; }
+        #app-ror .back-title { font-size: 0.95rem; font-weight: 800; color: white; line-height: 1.3; white-space: pre-wrap; }
+        #app-ror .back-meta-grid { display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-top: 0.25rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.75rem; }
+        #app-ror .back-meta-item { display: flex; flex-direction: column; gap: 0.15rem; }
+        #app-ror .back-meta-item.full-width { grid-column: 1 / -1; }
+        #app-ror .meta-label { font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.025em; }
+        #app-ror .meta-value { font-size: 0.8rem; color: #f1f5f9; white-space: pre-wrap; }
+        #app-ror .action-divider { border-top: 1px dashed rgba(245, 158, 11, 0.3); margin-top: 0.25rem; padding-top: 0.5rem; }
+        #app-ror .back-footer-info { display: flex; align-items: center; justify-content: space-between; font-size: 0.7rem; color: rgba(56, 189, 248, 0.6); border-top: 1px solid rgba(56, 189, 248, 0.15); padding-top: 0.5rem; z-index: 10; margin-top: auto; }
+
+        #app-ror .creator-panel { background-color: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 1.25rem; padding: 1.25rem; box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3); display: flex; flex-direction: column; gap: 1rem; width: 100%; }
+        #app-ror .panel-heading { font-size: 1rem; font-weight: 800; color: white; display: flex; align-items: center; gap: 0.5rem; }
+
+        #app-ror .canvas-container { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; gap: 0.75rem; }
+        #app-ror .sandbox-canvas { position: relative; width: 290px; height: 380px; background-color: #020203; border: 4px solid var(--amber-border); border-radius: 1.25rem; overflow: hidden; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); }
+        #app-ror .sandbox-canvas::before { content: ''; position: absolute; inset: 6px; border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 0.9rem; pointer-events: none; }
+
+        #app-ror .form-input { background-color: rgba(0, 0, 0, 0.4); border: 1px solid var(--panel-border); color: white; padding: 0.5rem 0.75rem; border-radius: 0.75rem; font-size: 0.8rem; outline: none; transition: all 0.2s; white-space: pre-wrap; }
+        #app-ror .form-input:focus { border-color: #0284c7; box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25); }
+        #app-ror select.form-input { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1rem; padding-right: 2rem; }
+        #app-ror select.form-input option { background-color: var(--panel-bg); color: white; }
+
+        #app-ror .btn-primary { background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none; color: white; font-weight: 700; padding: 0.75rem 1rem; border-radius: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3); transition: transform 0.1s, opacity 0.2s; width: 100%; }
+        #app-ror .btn-primary:active { transform: scale(0.98); }
+        #app-ror .btn-secondary { background-color: transparent; border: 1px solid var(--panel-border); color: var(--text-main); font-weight: 700; padding: 0.55rem 1rem; border-radius: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem; font-size: 0.75rem; transition: all 0.2s; width: 100%; }
+        #app-ror .btn-secondary:hover { background-color: rgba(255, 255, 255, 0.04); border-color: #475569; }
+        #app-ror .btn-danger { background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #f87171; font-size: 0.7rem; padding: 0.3rem 0.55rem; border-radius: 0.5rem; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; font-weight: 700; transition: all 0.2s; }
+        #app-ror .btn-danger:hover { background-color: rgba(239, 68, 68, 0.18); }
+
+        #app-ror .quiz-wrapper { max-width: 480px; margin: 0 auto; width: 100%; }
+        #app-ror .quiz-score-box { font-size: 0.75rem; font-weight: 800; background-color: rgba(0, 0, 0, 0.4); border: 1px solid var(--panel-border); padding: 0.3rem 0.65rem; border-radius: 1rem; color: var(--accent-cyan); font-family: monospace; }
+        #app-ror .quiz-option-btn { background-color: rgba(0, 0, 0, 0.3); border: 1px solid var(--panel-border); color: var(--text-muted); padding: 0.75rem 1rem; border-radius: 0.75rem; text-align: left; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; line-height: 1.4; width: 100%; font-weight: 600; }
+        #app-ror .quiz-option-btn:hover { background-color: rgba(255, 255, 255, 0.02); color: white; border-color: #475569; }
+        #app-ror .quiz-option-btn.correct { background-color: rgba(16, 185, 129, 0.1); border-color: #10b981; color: #34d399; font-weight: 700; }
+        #app-ror .quiz-option-btn.incorrect { background-color: rgba(239, 68, 68, 0.1); border-color: #ef4444; color: #f87171; font-weight: 700; }
+        #app-ror .quiz-feedback-box { padding: 0.75rem; border-radius: 0.75rem; font-size: 0.75rem; font-weight: 700; text-align: center; }
+        #app-ror .quiz-feedback-box.success { background-color: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); color: #34d399; }
+        #app-ror .quiz-feedback-box.error { background-color: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; }
+        #app-ror .quiz-action-bar { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--panel-border); padding-top: 0.75rem; gap: 0.5rem; }
+        
+        #app-ror .hidden { display: none !important; }
+        #app-ror footer { background-color: rgba(0, 0, 0, 0.4); border-top: 2px solid var(--panel-border); padding: 1.25rem 1rem; text-align: center; font-size: 0.65rem; color: #475569; line-height: 1.5; margin-top: auto; }
+        
+        #app-ror .card-front.day-mode, #app-ror .sandbox-canvas.day-mode { background: linear-gradient(to bottom, #7dd3fc 0%, #e0f2fe 100%); border: 4px solid #334155; }
+        #app-ror .card-front.day-mode::before, #app-ror .sandbox-canvas.day-mode::before { border-color: rgba(15, 23, 42, 0.2); }
+        
+        #app-ror .day-shape { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; }
+        #app-ror .shape-ball { width: 22px; height: 22px; background-color: #0f172a; border-radius: 50%; box-shadow: inset -3px -3px 6px rgba(0,0,0,0.4); }
+        #app-ror .shape-diamond { width: 20px; height: 20px; background-color: #0f172a; transform: translate(-50%, -50%) rotate(45deg); box-shadow: inset -2px -2px 4px rgba(0,0,0,0.4); }
+        #app-ror .shape-cone-up { width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-bottom: 24px solid #0f172a; background: none; }
+        #app-ror .shape-cone-down { width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 24px solid #0f172a; background: none; }
+        #app-ror .shape-cylinder { width: 16px; height: 28px; background-color: #0f172a; border-radius: 2px; box-shadow: inset -3px 0 6px rgba(0,0,0,0.4); }
+    </style>
+
+    <style>
+        #app-flashcard .perspective-1000 { perspective: 1000px; }
+        #app-flashcard .transform-style-3d { transform-style: preserve-3d; }
+        #app-flashcard .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        #app-flashcard .rotate-y-180 { transform: rotateY(180deg); }
+        #app-flashcard .is-flipped { transform: rotateY(180deg); }
+
+        #app-flashcard .card-scrollbar::-webkit-scrollbar { width: 6px; }
+        #app-flashcard .card-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        #app-flashcard .card-scrollbar::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 10px; }
+
+        #app-flashcard.dark-mode { background-color: #0f172a; color: #e2e8f0; }
+        #app-flashcard.dark-mode .bg-white { background-color: #1e293b; color: #f1f5f9; border-color: #334155; }
+        #app-flashcard.dark-mode .bg-gray-50 { background-color: #0f172a; border-color: #334155; }
+        #app-flashcard.dark-mode p, #app-flashcard.dark-mode h2, #app-flashcard.dark-mode h3 { color: #f1f5f9; }
+        #app-flashcard.dark-mode select, #app-flashcard.dark-mode input { background-color: #0f172a; color: #f1f5f9; border-color: #475569; }
+        #app-flashcard.dark-mode .text-gray-900, #app-flashcard.dark-mode .text-gray-800, #app-flashcard.dark-mode .text-gray-500 { color: #cbd5e1; }
+
+        #app-flashcard.dark-mode .bg-emerald-50 { background-color: #022c22 !important; border-color: #065f46 !important; }
+        #app-flashcard.dark-mode .bg-emerald-50 p { color: #a7f3d0 !important; }
+        #app-flashcard.dark-mode .bg-rose-50 { background-color: #4c0519 !important; border-color: #9f1239 !important; }
+        #app-flashcard.dark-mode .bg-rose-50 p { color: #fecdd3 !important; }
+
+        #app-flashcard.dark-mode .bg-indigo-50 { background-color: #1e1b4b !important; border-color: #312e81 !important; }
+        #app-flashcard.dark-mode .bg-indigo-50 p { color: #c7d2fe !important; }
+        #app-flashcard.dark-mode #final-score-value { color: #ffffff !important; }
+        #app-flashcard.dark-mode #celebration-screen h2 { color: #ffffff !important; }
+        #app-flashcard.dark-mode #celebration-screen p { color: #cbd5e1 !important; }
+
+        #app-flashcard .markdown-body ul { list-style-type: disc; margin-left: 1.25rem; margin-bottom: 0.5rem; }
+        #app-flashcard .markdown-body ol { list-style-type: decimal; margin-left: 1.25rem; margin-bottom: 0.5rem; }
+        #app-flashcard .markdown-body code { background: rgba(156, 163, 175, 0.2); padding: 0.12rem 0.3rem; border-radius: 4px; font-family: monospace; font-size: 85%; }
+        #app-flashcard.dark-mode .markdown-body code { background: rgba(255, 255, 255, 0.15); color: #f472b6; }
+    </style>
+    <style>
+        /* Share ROR light styles with the Flashcard App */
+        #app-flashcard .light-bulb { position: absolute; width: 18px; height: 18px; border-radius: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; }
+        #app-flashcard .light-bulb::after { content: ''; width: 6px; height: 6px; background-color: white; border-radius: 50%; }
+        #app-flashcard .light-red { background-color: #ef4444; box-shadow: 0 0 24px 10px rgba(239, 68, 68, 0.85); }
+        #app-flashcard .light-green { background-color: #10b981; box-shadow: 0 0 24px 10px rgba(16, 185, 129, 0.85); }
+        #app-flashcard .light-white { background-color: #f1f5f9; box-shadow: 0 0 24px 10px rgba(241, 245, 249, 0.85); }
+        #app-flashcard .light-yellow { background-color: #eab308; box-shadow: 0 0 24px 10px rgba(234, 179, 8, 0.85); }
+        #app-flashcard .light-flash-red { background-color: #ef4444; box-shadow: 0 0 24px 10px rgba(239, 68, 68, 0.85); animation: flashAnimation 1.2s infinite; }
+        #app-flashcard .light-flash-yellow { background-color: #eab308; box-shadow: 0 0 24px 10px rgba(234, 179, 8, 0.85); animation: flashAnimation 1.2s infinite; }
+        #app-flashcard .day-shape { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; }
+        #app-flashcard .shape-ball { width: 22px; height: 22px; background-color: #0f172a; border-radius: 50%; box-shadow: inset -3px -3px 6px rgba(0,0,0,0.4); }
+        #app-flashcard .shape-diamond { width: 20px; height: 20px; background-color: #0f172a; transform: translate(-50%, -50%) rotate(45deg); box-shadow: inset -2px -2px 4px rgba(0,0,0,0.4); }
+        #app-flashcard .shape-cone-up { width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-bottom: 24px solid #0f172a; background: none; }
+        #app-flashcard .shape-cone-down { width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 24px solid #0f172a; background: none; }
+        #app-flashcard .shape-cylinder { width: 16px; height: 28px; background-color: #0f172a; border-radius: 2px; box-shadow: inset -3px 0 6px rgba(0,0,0,0.4); }
+    </style>
+    <style>
+        body { margin: 0; padding: 0; transition: background-color 0.3s; }
+        .hub-active { background-color: #f3f4f6; font-family: sans-serif; }
+        .hidden-app { display: none !important; }
+        .back-to-hub-btn { 
+            position: absolute; top: 10px; right: 10px; z-index: 9999;
+            background: #ef4444; color: white; border: none; padding: 8px 12px;
+            border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .back-to-hub-btn:hover { background: #dc2626; }
+    </style>
+</head>
+<body class="hub-active">
+
+    <div id="app-hub" class="min-h-screen flex items-center justify-center p-6">
+        <div class="max-w-4xl w-full bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+            <div class="bg-indigo-600 p-8 text-center text-white">
+                <h1 class="text-4xl font-extrabold tracking-tight mb-2">Student Learning Hub</h1>
+                <p class="text-indigo-200 font-medium text-lg">Select a viewer application to begin your session</p>
+            </div>
+            
+            <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                <div onclick="launchApp('ror')" class="group cursor-pointer bg-slate-50 hover:bg-slate-100 border-2 border-slate-200 hover:border-sky-400 rounded-2xl p-6 transition-all transform hover:-translate-y-1 shadow-sm hover:shadow-md flex flex-col items-center text-center">
+                    <div class="w-16 h-16 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-800 mb-2">ROR Lights Viewer</h2>
+                    <p class="text-slate-500 text-sm">Interactive ColRegs Card Viewer & Quiz Mode for Maritime Signals.</p>
+                </div>
+
+                <div onclick="launchApp('flashcard')" class="group cursor-pointer bg-slate-50 hover:bg-slate-100 border-2 border-slate-200 hover:border-indigo-400 rounded-2xl p-6 transition-all transform hover:-translate-y-1 shadow-sm hover:shadow-md flex flex-col items-center text-center">
+                    <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-800 mb-2">Flashcard Quiz Player</h2>
+                    <p class="text-slate-500 text-sm">Import and review custom spaced-repetition flashcard decks locally.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="app-ror" class="hidden-app relative">
+        <button onclick="goHome()" class="back-to-hub-btn">🏠 Hub</button>
+
+        <header>
+            <div class="header-container pr-24">
+                <div class="logo-section">
+                    <div class="logo-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+                    </div>
+                    <div class="logo-title">
+                        <h1>ROR Lights Console <span class="badge-colreg">STUDENT</span></h1>
+                        <p>Interactive ColRegs Card Viewer & Quiz Mode</p>
+                    </div>
+                </div>
+
+                <div class="tabs-container">
+                    <button onclick="switchTab('study')" id="tab-study" class="tab-btn active">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                        Study Deck
+                    </button>
+                    <button onclick="switchTab('quiz')" id="tab-quiz" class="tab-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        Self Quiz
+                    </button>
+                    <button onclick="switchTab('flash')" id="tab-flash" class="tab-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>
+                        Practice Mode
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section id="section-study">
+                <div class="deck-header">
+                    <div class="sets-scroll" id="decks-container"></div>
+                    <div class="deck-actions-wrapper" id="deck-actions-container">
+                        
+                        <button onclick="document.getElementById('json-upload').click()" class="action-icon-btn" title="Import backup JSON file" style="color: var(--accent-cyan); border-color: rgba(56, 189, 248, 0.3);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            Import JSON File
+                        </button>
+                        <input type="file" id="json-upload" accept=".json" class="hidden" onchange="importJSON(event)">
+
+                        <div id="delete-divider" style="width: 1px; height: 16px; background: var(--panel-border); margin: 0 0.25rem;"></div>
+                        <button onclick="deleteCurrentDeck()" id="btn-delete-deck" class="action-icon-btn hidden" style="color: #f87171; border-color: rgba(239, 68, 68, 0.3);" title="Delete this custom deck">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            Delete Deck
+                        </button>
+                        <button onclick="syncToFlashcards()" class="action-icon-btn" title="Send this deck to the Flashcard Player" style="color: #10b981; border-color: rgba(16, 185, 129, 0.3);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                            Sync to Flashcards
+                        </button>
+                        <button onclick="printCheatSheet()" class="action-icon-btn" title="Print a Cheat Sheet of this deck">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                            Print Cheat Sheet
+                        </button>
+                        
+                        <div style="width: 1px; height: 16px; background: var(--panel-border); margin: 0 0.25rem;"></div>
+                        <button onclick="wipeAllData()" class="action-icon-btn" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" title="Wipe all data and reset app">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            Wipe All Data
+                        </button>
+                        <button id="toggle-all-btn" onclick="flipAll()" class="action-icon-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            Show All Answers
+                        </button>
+                    </div>
+                </div>
+
+                <div class="info-banner">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    <span>Tap any card to flip. Tap the orange rule numbers for full COLREG text. Import a valid JSON file to load your study materials.</span>
+                </div>
+
+                <div id="study-cards-grid" class="cards-grid"></div>
+            </section>
+
+            <section id="section-quiz" class="hidden">
+                <div class="quiz-wrapper">
+                    <div class="creator-panel">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--panel-border); padding-bottom: 0.75rem;">
+                            <span style="font-size: 0.65rem; font-weight: 800; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.05em;">ColRegs Test Center</span>
+                            <div id="quiz-score" class="quiz-score-box">Score: 0 / 0</div>
+                        </div>
+                        <div class="canvas-container">
+                            <div id="quiz-card-display" class="sandbox-canvas" style="width: 280px; height: 380px; cursor: default;">
+                                <div id="quiz-lights" style="position: absolute; inset: 0;"></div>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <p style="text-align: center; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.025em;">Identify this night signal profile:</p>
+                            <div id="quiz-options" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+                        </div>
+                        <div id="quiz-feedback" class="quiz-feedback-box hidden"></div>
+                        <div class="quiz-action-bar">
+                            <button onclick="resetQuiz()" class="btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.75rem; width: auto;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>Reset</button>
+                            <button onclick="nextQuizQuestion()" id="next-quiz-btn" class="btn-primary" style="padding: 0.4rem 1rem; font-size: 0.75rem; width: auto;">Skip Question</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="section-flash" class="hidden">
+                <div class="quiz-wrapper" style="max-width: 500px; text-align: center;">
+                    <div class="creator-panel" style="background-color: transparent; border: none; box-shadow: none; padding-top: 0;">
+                        <div class="deck-header" style="justify-content: space-between; margin-bottom: 1rem;">
+                            <span class="panel-heading" style="font-size: 0.8rem;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>
+                                Spaced Repetition Flashcards
+                            </span>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <select id="practice-deck-select" class="form-input" style="padding: 0.3rem 1.5rem 0.3rem 0.5rem; font-size: 0.7rem;"></select>
+                                <button onclick="startPracticeSession()" class="btn-primary" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.7rem;">Start Session</button>
+                            </div>
+                        </div>
+                        
+                        <div id="practice-stats" class="info-banner hidden" style="justify-content: space-between;">
+                            <span>Cards Remaining in Queue: <strong id="prac-remain" style="color: var(--accent-cyan); font-size: 1rem;">0</strong></span>
+                            <span>Mastered: <strong id="prac-mastered" style="color: #34d399; font-size: 1rem;">0</strong></span>
+                        </div>
+
+                        <div id="practice-card-slot" style="display:flex; justify-content:center; margin-bottom: 0.5rem; min-height: 450px; width: 100%;">
+                            <div style="color:var(--text-muted); display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; border: 1px dashed var(--panel-border); width: 100%; border-radius: 1rem;">
+                                <p style="font-size: 0.85rem; font-weight: bold; color: white; margin-bottom: 0.5rem;">Select a Deck and click "Start Session"</p>
+                                <p style="font-size: 0.7rem;">Cards you mark as "Need Practice" will automatically return to the end of your queue until you master them all.</p>
+                            </div>
+                        </div>
+
+                        <div id="practice-eval-buttons" class="hidden">
+                            <p style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.75rem;">Tip: Tap the card to flip it and check your answer before rating yourself.</p>
+                            <div style="display: flex; gap: 1rem; justify-content: center;">
+                                <button onclick="evaluatePractice(false)" class="btn-danger" style="padding: 0.75rem 1.5rem; font-size: 0.85rem; flex: 1; justify-content: center;">❌ Need Practice</button>
+                                <button onclick="evaluatePractice(true)" class="btn-primary" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 0.75rem 1.5rem; font-size: 0.85rem; flex: 1;">✅ Got It Right</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <footer>
+            <p>ROR Navigation Lights Console • Student Viewer Edition</p>
+            <p style="color: #334155; margin-top: 4px;">Formulated strictly under regulations conforming to the International Regulations for Preventing Collisions at Sea (COLREG-72).</p>
+        </footer>
+    </div>
+
+
+    <div id="app-flashcard" class="hidden-app bg-gray-50 min-h-screen text-gray-800 font-sans transition-colors duration-200 relative">
+        <button onclick="goHome()" class="back-to-hub-btn">🏠 Hub</button>
+
+        <header class="bg-indigo-600 text-white shadow-md p-4 mb-6">
+            <div class="max-w-3xl mx-auto flex justify-between items-center pr-24">
+                <h1 class="text-xl font-bold tracking-tight flex items-center gap-2">🎓 Flashcard Player</h1>
+                <button id="theme-toggle" class="bg-indigo-700 hover:bg-indigo-800 p-2 rounded-xl text-xs font-bold px-3 transition">🌙 Dark Mode</button>
+            </div>
+        </header>
+
+        <main class="max-w-3xl mx-auto px-4 pb-12 space-y-6">
+            
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-4 items-end justify-between">
+                <div class="flex-1 w-full">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">🗃️ Active Study Deck</label>
+                    <div class="flex gap-2">
+                        <select id="deck-select" class="flex-1 p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"></select>
+                        <button id="delete-deck-btn" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl text-xs font-bold transition border border-rose-200">🗑️ Delete</button>
+                    </div>
+                </div>
+                
+                <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                    <label for="import-deck-file" class="flex-1 sm:flex-none text-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs px-5 py-3 rounded-xl border border-indigo-200 transition cursor-pointer shadow-sm">
+                        📤 Import JSON Deck
+                    </label>
+                    <input type="file" id="import-deck-file" accept=".json" class="hidden">
+                </div>
+            </div>
+
+            <div id="quiz-area" class="space-y-6">
+                
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-2">
+                    <div class="flex justify-between items-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <span>Card Progress: <span id="progress-text">0/0</span></span>
+                        <span>Success Rate: <span id="score-percent">0%</span></span>
+                    </div>
+                    <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="w-0 h-full bg-indigo-600 transition-all duration-300"></div>
+                    </div>
+                </div>
+
+                <div class="perspective-1000 w-full h-96 group">
+                    <div id="flashcard" class="w-full h-full relative transform-style-3d transition-transform duration-500 cursor-pointer select-none rounded-2xl shadow-md border border-gray-200/60">
+                        <div class="absolute inset-0 backface-hidden bg-white rounded-2xl p-6 flex flex-col justify-between items-start text-left">
+                            <div class="w-full flex justify-between items-center mb-2">
+                                <span class="text-xs font-bold uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2.5 py-1 rounded-md">Front (Question)</span>
+                                <button id="tts-front" class="bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-gray-200 text-xs font-bold px-2.5 py-1 rounded-lg transition">🔊 Speak</button>
+                            </div>
+                            <div class="flex-1 w-full flex flex-col justify-center items-center gap-3 overflow-hidden my-1 relative">
+                            <div id="view-front-ror-canvas" class="hidden relative bg-[#020203] rounded-xl border-4 border-[#f59e0b] mx-auto shadow-inner overflow-hidden flex-shrink-0" style="width: 200px; height: 260px;"></div>                                    <img id="view-front-img" src="" class="hidden max-h-32 object-contain rounded-lg max-w-full" alt="Front Illustration">
+                                <div id="view-front-text" class="card-scrollbar markdown-body w-full text-base sm:text-lg font-semibold text-gray-800 text-left overflow-y-auto pr-2 max-h-full"></div>
+                            </div>
+                            <span class="text-xs text-gray-400 italic self-center mt-2">💡 Click anywhere on the card to flip</span>
+                        </div>
+                        <div class="absolute inset-0 backface-hidden rotate-y-180 bg-indigo-900 rounded-2xl p-6 flex flex-col justify-between items-start text-left text-white">
+                            <div class="w-full flex justify-between items-center mb-2">
+                                <span class="text-xs font-bold uppercase tracking-widest text-indigo-300 bg-indigo-950/50 px-2.5 py-1 rounded-md">Back (Answer)</span>
+                                <button id="tts-back" class="bg-indigo-950/50 hover:bg-indigo-950 text-indigo-200 text-xs font-bold px-2.5 py-1 rounded-lg transition">🔊 Speak</button>
+                            </div>
+                            <div class="flex-1 w-full flex flex-col justify-center items-center gap-3 overflow-hidden my-1">
+                                <img id="view-back-img" src="" class="hidden max-h-32 object-contain rounded-lg max-w-full" alt="Back Illustration">
+                                <div id="view-back-text" class="card-scrollbar markdown-body w-full text-base sm:text-lg font-medium text-indigo-100 text-left overflow-y-auto pr-2 max-h-full"></div>
+                            </div>
+                            <span class="text-xs text-indigo-300/70 italic self-center mt-2">🔄 Click again to flip back</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <button id="prev-btn" class="flex-1 sm:flex-none p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition text-gray-600 font-semibold text-sm px-5">← Prev</button>
+                        <button id="shuffle-btn" class="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold text-xs p-2.5 rounded-xl transition">🔀 Shuffle</button>
+                        <button id="next-btn" class="flex-1 sm:flex-none p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition text-gray-600 font-semibold text-sm px-5">Next →</button>
+                    </div>
+
+                    <div id="grading-controls" class="invisible flex items-center gap-2 w-full sm:w-auto">
+                        <button id="mark-wrong" class="flex-1 sm:flex-none bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-5 py-2.5 rounded-xl text-sm font-semibold transition">❌ Incorrect</button>
+                        <button id="mark-right" class="flex-1 sm:flex-none bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-xl text-sm font-semibold transition">✅ Correct</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
+                        <p class="text-xs text-emerald-600 font-bold uppercase tracking-wider">Correct</p>
+                        <p id="stats-correct" class="text-2xl font-bold text-emerald-800 mt-0.5">0</p>
+                    </div>
+                    <div class="bg-rose-50 border border-rose-100 rounded-xl p-3 text-center">
+                        <p class="text-xs text-rose-600 font-bold uppercase tracking-wider">Incorrect</p>
+                        <p id="stats-wrong" class="text-2xl font-bold text-rose-800 mt-0.5">0</p>
+                    </div>
+                </div>
+
+                <p class="text-center text-xs text-gray-400 font-medium">Loaded Deck Inventory Size: <span id="deck-count" class="font-bold text-gray-500">0</span> cards</p>
+            </div>
+
+            <div id="celebration-screen" class="hidden bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center space-y-6">
+                <div class="text-5xl">🏆</div>
+                <div class="space-y-2">
+                    <h2 class="text-2xl font-bold text-gray-900">Deck Finished!</h2>
+                    <p class="text-gray-500 text-sm">Review run successfully compiled below.</p>
+                </div>
+                <div class="inline-block bg-indigo-50 border border-indigo-100 px-8 py-4 rounded-2xl">
+                    <p class="text-xs font-bold uppercase tracking-widest text-indigo-600">Final Precision Score</p>
+                    <p id="final-score-value" class="text-4xl font-extrabold text-indigo-900 mt-1">0%</p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3 max-w-sm mx-auto">
+                    <button id="cram-missed-btn" class="hidden flex-1 py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl transition text-sm">❌ Cram Missed</button>
+                    <button id="restart-quiz-btn" class="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition text-sm">🔄 Restart Deck</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function launchApp(appId) {
+            document.getElementById('app-hub').classList.add('hidden-app');
+            document.body.classList.remove('hub-active');
+            
+            if (appId === 'ror') {
+                document.getElementById('app-ror').classList.remove('hidden-app');
+                document.body.style.backgroundColor = '#070b13';
+            } else if (appId === 'flashcard') {
+                document.getElementById('app-flashcard').classList.remove('hidden-app');
+                document.body.style.backgroundColor = '';
+            }
+        }
+
+        function goHome() {
+            document.getElementById('app-ror').classList.add('hidden-app');
+            document.getElementById('app-flashcard').classList.add('hidden-app');
+            document.getElementById('app-hub').classList.remove('hidden-app');
+            document.body.classList.add('hub-active');
+            document.body.style.backgroundColor = '';
+        }
+    </script>
+
+
+    <script>
+        const ruleTexts = {
+            "Rule 23": "Rule 23 - Power-driven vessels underway:\n(a) A power-driven vessel underway shall exhibit:\n(i) a masthead light forward;\n(ii) a second masthead light abaft of and higher than the forward one;\n(iii) sidelights;\n(iv) a sternlight.",
+            "Rule 24(a)": "Rule 24 - Towing and pushing:\n(a) A power-driven vessel when towing shall exhibit:\n(i) instead of the light prescribed in Rule 23(a)(i) or (a)(ii), two masthead lights in a vertical line. When the length of the tow exceeds 200 meters, three such lights in a vertical line;\n(ii) sidelights;\n(iii) a sternlight;\n(iv) a towing light in a vertical line above the sternlight;\n(v) when the length of the tow exceeds 200 meters, a diamond shape where it can best be seen.",
+            "Rule 25": "Rule 25 - Sailing vessels underway and vessels under oars:\n(a) A sailing vessel underway shall exhibit:\n(i) sidelights;\n(ii) a sternlight.",
+            "Rule 26(b)": "Rule 26 - Fishing vessels:\n(b) A vessel when engaged in trawling, by which is meant the dragging through the water of a dredge net or other apparatus used as a fishing appliance, shall exhibit:\n(i) two all-round lights in a vertical line, the upper being green and the lower white, or a shape consisting of two cones with their apexes together in a vertical line;\n(ii) a masthead light abaft of and higher than the all-round green light; a vessel of less than 50 meters in length shall not be obliged to exhibit such a light but may do so;\n(iii) when making way through the water, in addition to the lights prescribed in this paragraph, sidelights and a sternlight.",
+            "Rule 26(c)": "Rule 26 - Fishing vessels:\n(c) A vessel engaged in fishing, other than trawling, shall exhibit:\n(i) two all-round lights in a vertical line, the upper being red and the lower white, or a shape consisting of two cones with apexes together in a vertical line;\n(ii) when there is outlying gear extending more than 150 meters horizontally from the vessel, an all-round white light or a cone apex upwards in the direction of the gear;\n(iii) when making way through the water, in addition to the lights prescribed in this paragraph, sidelights and a sternlight.",
+            "Rule 27(a)": "Rule 27 - Vessels not under command or restricted in their ability to maneuver:\n(a) A vessel not under command shall exhibit:\n(i) two all-round red lights in a vertical line where they can best be seen;\n(ii) two balls or similar shapes in a vertical line where they can best be seen;\n(iii) when making way through the water, in addition to the lights prescribed in this paragraph, sidelights and a sternlight.",
+            "Rule 27(b)": "Rule 27 - Vessels not under command or restricted in their ability to maneuver:\n(b) A vessel restricted in her ability to maneuver, except a vessel engaged in mineclearance operations, shall exhibit:\n(i) three all-round lights in a vertical line where they can best be seen. The highest and lowest of these lights shall be red and the middle light shall be white;\n(ii) three shapes in a vertical line where they can best be seen. The highest and lowest of these shapes shall be balls and the middle one a diamond;\n(iii) when making way through the water, a masthead light or lights, sidelights and a sternlight, in addition to the lights prescribed in subparagraph (i);\n(iv) when at anchor, in addition to the lights or shapes prescribed in subparagraphs (i) and (ii), the light, lights or shape prescribed in Rule 30.",
+            "Rule 28": "Rule 28 - Vessels constrained by their draught:\nA vessel constrained by her draught may, in addition to the lights prescribed for power-driven vessels in Rule 23, exhibit where they can best be seen three all-round red lights in a vertical line, or a cylinder.",
+            "Rule 29": "Rule 29 - Pilot vessels:\n(a) A vessel engaged on pilotage duty shall exhibit:\n(i) at or near the masthead, two all-round lights in a vertical line, the upper being white and the lower red;\n(ii) when underway, in addition, sidelights and a sternlight;\n(iii) when at anchor, in addition to the lights prescribed in subparagraph (i), the light, lights or shape prescribed in Rule 30 for vessels at anchor.",
+            "Rule 30": "Rule 30 - Anchored vessels and vessels aground:\n(a) A vessel at anchor shall exhibit where it can best be seen:\n(i) in the fore part, an all-round white light or one ball;\n(ii) at or near the stern and at a lower level than the light forward, an all-round white light."
+        };
+
+        let currentSet = null; 
+        let loadedDecks = [];
+        let loadedCards = [];
+        
+        let currentQuizCard = null;
+        let quizStats = { correct: 0, total: 0 };
+        
+        let practiceQueue = [];
+        let practiceMastered = 0;
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Note: I added saveData() to this interval so both apps save automatically
+            setInterval(() => { saveVaultToStorage2(); saveData(); }, 30000); 
+            
+            try {
+                const localCards = await localforage.getItem('ror_viewer_cards');
+                if (localCards) { loadedCards = typeof localCards === 'string' ? JSON.parse(localCards) : localCards; }
+                
+                const localDecks = await localforage.getItem('ror_viewer_decks');
+                if (localDecks) {
+                    loadedDecks = typeof localDecks === 'string' ? JSON.parse(localDecks) : localDecks;
+                    if (loadedDecks.length > 0) currentSet = loadedDecks[0].id; 
+                }
+            } catch(e) {
+                console.error("IndexedDB Load Error:", e);
+            }
+            
+            renderDeckTabs();
+            loadSet(currentSet);
+
+            const cardGrid = document.querySelector('#app-ror #study-cards-grid');
+            if (cardGrid) {
+                // ... (keep your existing searchContainer code here exactly as it is) ...
+                const searchContainer = document.createElement('div');
+                searchContainer.style.cssText = "margin-bottom: 1.5rem; width: 100%; max-width: 400px; position: relative;";
+                searchContainer.innerHTML = `
+                    <input type="text" id="global-search-input" placeholder="🔍 Search cards by title, rule, aspect, or action..." 
+                        style="width: 100%; padding: 0.65rem 1rem; padding-left: 2.25rem; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 0.75rem; color: var(--text-main); font-size: 0.85rem; outline: none; transition: border-color 0.2s;" />
+                `;
+                cardGrid.parentNode.insertBefore(searchContainer, cardGrid);
+
+                const inputEl = searchContainer.querySelector('input');
+                inputEl.addEventListener('focus', () => inputEl.style.borderColor = 'var(--accent-cyan)');
+                inputEl.addEventListener('blur', () => inputEl.style.borderColor = 'var(--panel-border)');
+                inputEl.addEventListener('input', handleGlobalSearch);
+            }
+        });
+
+        function renderDeckTabs() {
+            const container = document.getElementById('decks-container');
+            if (loadedDecks.length === 0) { container.innerHTML = '<span style="color: var(--accent-cyan);">No decks loaded. Please Import JSON.</span>'; return; }
+            container.innerHTML = '<span>Decks:</span>';
+            loadedDecks.forEach(deck => {
+                const btn = document.createElement('button');
+                btn.className = `set-selector-btn ${currentSet === deck.id ? 'active' : ''}`;
+                btn.id = `setbtn-${deck.id}`;
+                btn.innerText = deck.name;
+                btn.onclick = () => loadSet(deck.id);
+                container.appendChild(btn);
+            });
+        }
+
+        async function saveData() {
+            try {
+                // localForage automatically stringifies data, so we just pass the array
+                await localforage.setItem('ror_viewer_decks', loadedDecks);
+                await localforage.setItem('ror_viewer_cards', loadedCards);
+            } catch(err) {
+                console.error("ROR Save failed:", err);
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelector('#app-ror #section-study').classList.add('hidden');
+            document.querySelector('#app-ror #section-quiz').classList.add('hidden');
+            document.querySelector('#app-ror #section-flash').classList.add('hidden');
+
+            document.getElementById('tab-study').classList.remove('active');
+            document.getElementById('tab-quiz').classList.remove('active');
+            document.getElementById('tab-flash').classList.remove('active');
+
+            if (tabId === 'study') {
+                document.querySelector('#app-ror #section-study').classList.remove('hidden');
+                document.getElementById('tab-study').classList.add('active');
+                renderDeckTabs(); loadSet(currentSet);
+            } else if (tabId === 'quiz') {
+                document.querySelector('#app-ror #section-quiz').classList.remove('hidden');
+                document.getElementById('tab-quiz').classList.add('active');
+                startQuiz();
+            } else if (tabId === 'flash') {
+                document.querySelector('#app-ror #section-flash').classList.remove('hidden');
+                document.getElementById('tab-flash').classList.add('active');
+                populatePracticeDecks();
+            }
+        }
+
+        function loadSet(setId) {
+            currentSet = setId;
+            document.querySelectorAll('#app-ror .set-selector-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById(`setbtn-${setId}`);
+            if(activeBtn) activeBtn.classList.add('active');
+
+            const container = document.getElementById('study-cards-grid');
+            if(!container) return;
+            container.innerHTML = '';
+
+            const deleteBtn = document.getElementById('btn-delete-deck');
+            const deleteDivider = document.getElementById('delete-divider');
+            if (deleteBtn) deleteBtn.classList.toggle('hidden', loadedDecks.length === 0);
+            if (deleteDivider) deleteDivider.classList.toggle('hidden', loadedDecks.length === 0);
+
+            if (loadedDecks.length === 0) {
+                container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);"><p style="font-size: 0.85rem;">Welcome to the Viewer! <br><br> Click <strong>Import JSON File</strong> to load the study deck provided by your instructor/friend.</p></div>`;
+                return;
+            }
+
+            const deckCards = loadedCards.filter(item => item.set === setId);
+            if (deckCards.length === 0) {
+                container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);"><p style="font-size: 0.8rem;">This deck contains no cards.</p></div>`;
+                return;
+            }
+            deckCards.forEach(card => { container.innerHTML += buildCardHtml(card, ''); });
+        }
+
+        function showRuleText(event, ruleName) {
+            event.stopPropagation(); 
+            const text = ruleTexts[ruleName] || "Rule text not available offline. Please check official COLREGS documentation.";
+            alert(`COLREGS REFERENCE:\n\n${text}`);
+        }
+
+        function buildCardHtml(card, idPrefix = '') {
+            let lightsMarkup = '';
+            const isDayCard = card.lights.some(l => l.color.startsWith('shape-'));
+            const dayClass = isDayCard ? 'day-mode' : '';
+
+            card.lights.forEach(light => {
+                if (light.color.startsWith('shape-')) {
+                    lightsMarkup += `<div class="day-shape ${light.color}" style="left: ${light.x}px; top: ${light.y}px;"></div>`;
+                } else {
+                    const colorClass = { red: 'light-red', green: 'light-green', white: 'light-white', yellow: 'light-yellow', 'flash-red': 'light-flash-red', 'flash-yellow': 'light-flash-yellow' }[light.color] || 'light-white';
+                    lightsMarkup += `<div class="light-bulb ${colorClass}" style="left: ${light.x}px; top: ${light.y}px;"></div>`;
+                }
+            });
+
+            const uniqueCardId = `${idPrefix}${card.id}`;
+            const hasData = (val) => val && val.trim() !== '' && val.trim().toUpperCase() !== 'N/A';
+
+            return `
+                <div class="card-perspective">
+                    <div id="card-inner-${uniqueCardId}" onclick="toggleCardFlip('${uniqueCardId}')" class="card-inner">
+                        <div class="card-front ${dayClass}">
+                            <div class="lights-layer">${lightsMarkup}</div>
+                            <div class="card-footer-info">
+                                <button class="rule-btn" onclick="showRuleText(event, '${card.rule}')">${card.rule || 'ColRegs'}</button>
+                                <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>Tap to Flip</span>
+                            </div>
+                        </div>
+                        <div class="card-back">
+                            <div class="card-back-content">
+                                <div style="display: flex; flex-direction: column; gap: 0.25rem;"><h4 class="back-title">${card.title || 'Unknown Vessel'}</h4></div>
+                                <div class="back-meta-grid">
+                                    ${hasData(card.length) ? `<div class="back-meta-item"><span class="meta-label">Length</span><span class="meta-value">${card.length}</span></div>` : ''}
+                                    ${hasData(card.vesselFunction) ? `<div class="back-meta-item"><span class="meta-label">Function</span><span class="meta-value">${card.vesselFunction}</span></div>` : ''}
+                                    ${hasData(card.status) ? `<div class="back-meta-item"><span class="meta-label">Status</span><span class="meta-value">${card.status}</span></div>` : ''}
+                                    ${hasData(card.aspect) ? `<div class="back-meta-item"><span class="meta-label">Aspect</span><span class="meta-value" style="color: var(--accent-cyan); font-weight: bold;">${card.aspect}</span></div>` : ''}
+                                    ${hasData(card.daySignal) ? `<div class="back-meta-item"><span class="meta-label">Day Signal</span><span class="meta-value">${card.daySignal}</span></div>` : ''}
+                                    ${hasData(card.soundSignal) ? `<div class="back-meta-item"><span class="meta-label">Sound Signal</span><span class="meta-value">${card.soundSignal}</span></div>` : ''}
+                                    ${hasData(card.action) ? `<div class="back-meta-item full-width action-divider"><span class="meta-label" style="color: #fca5a5;">Action / Maneuver</span><span class="meta-value" style="font-size: 0.75rem; color: #fecaca; white-space: pre-line; line-height: 1.4;">${card.action}</span></div>` : ''}
+                                </div>
+                            </div>
+                            <div class="back-footer-info">
+                                <span>Verify details</span>
+                                <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>Tap to Front</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleCardFlip(cardId) {
+            const inner = document.getElementById(`card-inner-${cardId}`);
+            if (inner) inner.classList.toggle('flipped');
+        }
+
+        function flipAll() {
+            const cards = document.querySelectorAll('#app-ror .card-inner');
+            if (cards.length === 0) return;
+            const allFlipped = Array.from(cards).every(card => card.classList.contains('flipped'));
+            const toggleBtn = document.getElementById('toggle-all-btn');
+            
+            if (allFlipped) {
+                cards.forEach(card => card.classList.remove('flipped'));
+                if (toggleBtn) {
+                    toggleBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Show All Answers`;
+                }
+            } else {
+                cards.forEach(card => card.classList.add('flipped'));
+                if (toggleBtn) {
+                    toggleBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg> Hide All`;
+                }
+            }
+        }
+
+        function importJSON(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const fileNameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    // FIX: Check for either 'decks' (array) or 'deck' (singular object)
+                    if ((!data.decks && !data.deck) || !data.cards) { 
+                        showOfflineAlert("Invalid JSON file. Please ensure it's a valid ROR Backup file."); 
+                        return; 
+                    }
+
+                    // Normalize deck data into an array so the rest of the code works as expected
+                    let incomingDecks = [];
+                    if (data.decks && Array.isArray(data.decks)) {
+                        incomingDecks = data.decks;
+                    } else if (data.deck) {
+                        incomingDecks = [data.deck];
+                    }
+
+                    const activeDeckIds = new Set(data.cards.map(card => card.set));
+                    let filteredDecks = incomingDecks.filter(deck => activeDeckIds.has(deck.id));
+
+                    if (filteredDecks.length === 0 && incomingDecks.length > 0) {
+                        filteredDecks = [incomingDecks[0]];
+                        data.cards.forEach(card => card.set = filteredDecks[0].id);
+                    }
+
+                    const incomingCards = data.cards;
+                    const timestamp = Date.now();
+
+                    filteredDecks.forEach((deck, deckIdx) => {
+                        const oldDeckId = deck.id;
+                        const newDeckId = `deck_${timestamp}_${deckIdx}`;
+                        deck.id = newDeckId;
+                        deck.name = fileNameWithoutExt + (filteredDecks.length > 1 ? ` (${deckIdx + 1})` : '');
+                        incomingCards.forEach((card, cardIdx) => {
+                            if (card.set === oldDeckId) { card.set = newDeckId; }
+                            card.id = `card_${timestamp}_${deckIdx}_${cardIdx}`;
+                        });
+                    });
+
+                    loadedDecks = [...loadedDecks, ...filteredDecks]; 
+                    loadedCards = [...loadedCards, ...incomingCards]; 
+                    saveData(); 
+
+                    if (filteredDecks.length > 0) { currentSet = filteredDecks[0].id; }
+                    renderDeckTabs(); loadSet(currentSet);
+                    showOfflineAlert(`Successfully added "${fileNameWithoutExt}" to your collection!`);
+                } catch (err) { 
+                    showOfflineAlert("Error reading JSON file. It may be corrupted."); 
+                }
+                document.getElementById('json-upload').value = ''; 
+            };
+            reader.readAsText(file);
+        }
+        function populatePracticeDecks() {
+            const select = document.getElementById('practice-deck-select');
+            select.innerHTML = '<option value="all">All Decks (Mixed Stack)</option>';
+            loadedDecks.forEach(deck => {
+                const opt = document.createElement('option');
+                opt.value = deck.id; opt.innerText = deck.name;
+                select.appendChild(opt);
+            });
+        }
+
+        function startPracticeSession() {
+            const deckId = document.getElementById('practice-deck-select').value;
+            let sourceCards = [];
+            if (deckId === 'all') { sourceCards = [...loadedCards]; } 
+            else {
+                const parsedId = isNaN(deckId) ? deckId : parseInt(deckId);
+                sourceCards = loadedCards.filter(c => c.set === parsedId);
+            }
+            if (sourceCards.length === 0) { showOfflineAlert("No cards available in the selected deck."); return; }
+            practiceQueue = sourceCards.sort(() => Math.random() - 0.5);
+            practiceMastered = 0;
+            document.getElementById('practice-stats').classList.remove('hidden');
+            document.getElementById('practice-eval-buttons').classList.remove('hidden');
+            showPracticeCard();
+        }
+
+        function showPracticeCard() {
+            document.getElementById('prac-remain').innerText = practiceQueue.length;
+            document.getElementById('prac-mastered').innerText = practiceMastered;
+            const slot = document.getElementById('practice-card-slot');
+            if (practiceQueue.length === 0) {
+                slot.innerHTML = `
+                    <div style="color:var(--text-main); display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; width: 100%; border: 1px dashed #10b981; border-radius: 1rem; background-color: rgba(16, 185, 129, 0.05);">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" style="color: #34d399; margin-bottom: 1rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        <h3 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 0.5rem; color: #34d399;">Session Complete!</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">You have successfully mastered all cards in this queue.</p>
+                    </div>`;
+                document.getElementById('practice-eval-buttons').classList.add('hidden');
+                return;
+            }
+            const card = practiceQueue[0];
+            slot.innerHTML = buildCardHtml(card, 'prac-');
+        }
+
+        function evaluatePractice(knewIt) {
+            if (practiceQueue.length === 0) return;
+            const currentCard = practiceQueue.shift(); 
+            if (knewIt) { practiceMastered++; } else { practiceQueue.push(currentCard); }
+            showPracticeCard();
+        }
+
+        function startQuiz() { nextQuizQuestion(); }
+        function nextQuizQuestion() {
+            if (loadedCards.length === 0) {
+                const lightsContainer = document.getElementById('quiz-lights');
+                lightsContainer.innerHTML = `<div style="display:flex; justify-content:center; align-items:center; height:100%; color:#475569; font-size: 0.8rem; text-align:center; padding: 1rem;">No cards loaded. Please import a JSON file first.</div>`;
+                document.getElementById('quiz-options').innerHTML = '';
+                return;
+            }
+            const rIndex = Math.floor(Math.random() * loadedCards.length);
+            currentQuizCard = loadedCards[rIndex];
+            const lightsContainer = document.getElementById('quiz-lights');
+            lightsContainer.innerHTML = '';
+            const scaleFactor = 280 / 290;
+            currentQuizCard.lights.forEach(light => {
+                const cCls = { red: 'light-red', green: 'light-green', white: 'light-white', yellow: 'light-yellow', 'flash-red': 'light-flash-red', 'flash-yellow': 'light-flash-yellow' }[light.color] || 'light-white';
+                const el = document.createElement('div'); el.className = `light-bulb ${cCls}`;
+                el.style.left = `${Math.round(light.x * scaleFactor)}px`; el.style.top = `${Math.round(light.y * scaleFactor)}px`;
+                lightsContainer.appendChild(el);
+            });
+            document.getElementById('quiz-feedback').className = "quiz-feedback-box hidden";
+            document.getElementById('next-quiz-btn').innerText = "Skip Question";
+            buildQuizOptions(loadedCards);
+        }
+
+        function buildQuizOptions(sourceCards) {
+            const container = document.getElementById('quiz-options'); container.innerHTML = '';
+            const correctString = `${currentQuizCard.title} (${currentQuizCard.aspect})`;
+            const pool = [correctString];
+            const distractors = sourceCards.filter(c => c.id !== currentQuizCard.id).map(c => `${c.title} (${c.aspect})`);
+            const uniqueDistractors = [...new Set(distractors)];
+            uniqueDistractors.sort(() => Math.random() - 0.5);
+            for (let i = 0; i < Math.min(3, uniqueDistractors.length); i++) pool.push(uniqueDistractors[i]);
+            pool.sort(() => Math.random() - 0.5);
+            pool.forEach(opt => {
+                const btn = document.createElement('button'); btn.className = "quiz-option-btn"; btn.innerText = opt;
+                btn.onclick = () => evaluateQuizAnswer(opt, correctString, btn);
+                container.appendChild(btn);
+            });
+        }
+
+        function evaluateQuizAnswer(selected, correct, element) {
+            const feedback = document.getElementById('quiz-feedback'); feedback.classList.remove('hidden');
+            quizStats.total += 1;
+            if (selected === correct) {
+                quizStats.correct += 1;
+                feedback.className = "quiz-feedback-box success"; feedback.innerText = "Correct Choice! Excellent navigation competence.";
+                element.className = "quiz-option-btn correct";
+            } else {
+                feedback.className = "quiz-feedback-box error"; feedback.innerText = `Incorrect choice. Solution: ${correct}`;
+                element.className = "quiz-option-btn incorrect";
+            }
+            document.querySelectorAll('#app-ror #quiz-options button').forEach(b => b.disabled = true);
+            document.getElementById('quiz-score').innerText = `Score: ${quizStats.correct} / ${quizStats.total}`;
+            document.getElementById('next-quiz-btn').innerText = "Next Question";
+        }
+
+        function resetQuiz() { quizStats = { correct: 0, total: 0 }; document.getElementById('quiz-score').innerText = "Score: 0 / 0"; nextQuizQuestion(); }
+
+        function showOfflineAlert(message) {
+            const popup = document.createElement('div'); popup.style.position = 'fixed'; popup.style.bottom = '32px'; popup.style.left = '50%'; popup.style.transform = 'translateX(-50%)'; popup.style.backgroundColor = '#0f172a'; popup.style.border = '1px solid #38bdf8'; popup.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.4)'; popup.style.color = '#fff'; popup.style.padding = '0.6rem 1.2rem'; popup.style.borderRadius = '0.75rem'; popup.style.fontSize = '0.8rem'; popup.style.fontWeight = 'bold'; popup.style.zIndex = '9999';
+            popup.innerText = message; document.body.appendChild(popup);
+            setTimeout(() => { popup.style.opacity = '0'; popup.style.transition = 'opacity 0.4s ease'; setTimeout(() => document.body.removeChild(popup), 400); }, 2500);
+        }
+
+        function deleteCurrentDeck() {
+            if (!currentSet) return;
+            if (confirm("Are you sure you want to delete this deck and ALL cards inside it?")) {
+                loadedDecks = loadedDecks.filter(d => d.id !== currentSet);
+                loadedCards = loadedCards.filter(c => c.set !== currentSet);
+                saveData(); 
+                if (loadedDecks.length > 0) { currentSet = loadedDecks[0].id; } else { currentSet = null; }
+                renderDeckTabs(); loadSet(currentSet); showOfflineAlert("Deck deleted successfully.");
+            }
+        }
+        async function syncToFlashcards() {
+    if (!currentSet) { showOfflineAlert("No deck selected to sync."); return; }
+    
+    const sourceDeck = loadedDecks.find(d => d.id === currentSet);
+    const sourceCards = loadedCards.filter(c => c.set === currentSet);
+    
+    if (sourceCards.length === 0) { showOfflineAlert("This deck is empty!"); return; }
+
+    // Helper to check if data actually exists and isn't just "N/A" or blank spaces
+    const hasData = (val) => val && val.toString().trim() !== '' && val.toString().trim().toUpperCase() !== 'N/A';
+
+    // Map ROR cards into Flashcard format dynamically
+    const syncedCards = sourceCards.map(c => {
+        let dynamicBackText = `### ${c.title || 'Unknown Vessel'}\n\n`;
+        
+        if (hasData(c.length)) dynamicBackText += `**Length:** ${c.length}\n`;
+        if (hasData(c.vesselFunction)) dynamicBackText += `**Function:** ${c.vesselFunction}\n`;
+        if (hasData(c.status)) dynamicBackText += `**Status:** ${c.status}\n`;
+        if (hasData(c.aspect)) dynamicBackText += `**Aspect:** ${c.aspect}\n`;
+        if (hasData(c.daySignal)) dynamicBackText += `**Day Signal:** ${c.daySignal}\n`;
+        if (hasData(c.soundSignal)) dynamicBackText += `**Sound Signal:** ${c.soundSignal}\n`;
+        if (hasData(c.rule)) dynamicBackText += `**Rule:** ${c.rule}\n`;
+        
+        if (hasData(c.action)) dynamicBackText += `\n**Action / Maneuver:**\n${c.action}\n`;
+
+        return {
+            frontText: "", 
+            backText: dynamicBackText.trim(),
+            rawRorData: c // Attach raw data for the canvas renderer
+        };
+    });
+
+    const newDeckId = "sync_" + Date.now();
+    fcVault.decks[newDeckId] = {
+        name: "⚓ ROR: " + sourceDeck.name,
+        cards: syncedCards
+    };
+    fcVault.activeDeckId = newDeckId;
+
+    await saveVaultToStorage2();
+    initVaultUI2(); 
+    loadActiveDeckSession2(); 
+    
+    showOfflineAlert(`Successfully synced to Flashcards! Return to the Hub to practice.`);
+}
+
+       async function wipeAllData() {
+            const doubleCheck = confirm("⚠️ WARNING: This will permanently delete ALL imported decks, cards, and practice stats from this device. Proceed?");
+            if (doubleCheck) {
+                await localforage.removeItem('ror_viewer_decks'); 
+                await localforage.removeItem('ror_viewer_cards');
+                loadedDecks = []; loadedCards = []; currentSet = null; practiceQueue = []; practiceMastered = 0; quizStats = { correct: 0, total: 0 };
+                renderDeckTabs(); loadSet(null);
+                document.getElementById('quiz-score').innerText = "Score: 0 / 0";
+                document.getElementById('practice-stats').classList.add('hidden'); document.getElementById('practice-eval-buttons').classList.add('hidden');
+                document.getElementById('practice-card-slot').innerHTML = '';
+                showOfflineAlert("App has been factory reset.");
+            }
+        }
+
+        function handleGlobalSearch(e) {
+            const query = e.target.value.toLowerCase().trim();
+            const container = document.querySelector('#app-ror #study-cards-grid');
+            if (!container) return;
+            Array.from(container.children).forEach(cardEl => {
+                let combinedText = cardEl.textContent.toLowerCase();
+                cardEl.querySelectorAll('input, textarea, select').forEach(input => { combinedText += ' ' + input.value.toLowerCase(); });
+                if (query === '' || combinedText.includes(query)) { cardEl.style.display = ''; } else { cardEl.style.display = 'none'; }
+            });
+        }
+
+        function printCheatSheet() {
+            let deckSet = loadedCards.filter(item => item.set === currentSet);
+            if (deckSet.length === 0) { showOfflineAlert("No cards loaded in this deck to print."); return; }
+            let printWindow = window.open('', '_blank');
+            let html = `<html><head><title>ColRegs Cheat Sheet</title><style>body { font-family: Arial, sans-serif; padding: 20px; color: #000; } table { width: 100%; border-collapse: collapse; margin-top: 20px; } th, td { border: 1px solid #ccc; padding: 10px; text-align: left; font-size: 13px; } th { background-color: #f4f4f4; } h2 { text-align: center; font-family: sans-serif; } @media print { button { display: none; } }</style></head><body><h2>ColRegs Deck Cheat Sheet</h2><button onclick="window.print()" style="margin-bottom: 20px; padding: 10px 20px; font-weight: bold; cursor: pointer;">🖨️ Print Document</button><table><tr><th>Vessel Identification</th><th>Aspect</th><th>Status</th><th>Day Signal</th><th>Sound Signal</th><th>Action</th><th>Rule</th></tr>`;
+            deckSet.forEach(card => {
+                html += `<tr><td><strong>${card.title || 'N/A'}</strong><br><em>${card.length || ''}</em></td><td>${card.aspect || 'N/A'}</td><td>${card.status || 'N/A'}</td><td>${card.daySignal || 'N/A'}</td><td>${card.soundSignal || 'N/A'}</td><td>${card.action || 'N/A'}</td><td>${card.rule || 'N/A'}</td></tr>`;
+            });
+            html += `</table></body></html>`; printWindow.document.write(html); printWindow.document.close();
+        }
+    </script>
+
+    <script>
+            let fcVault = {
+                activeDeckId: "default",
+                decks: {
+                    "default": {
+                        name: "Welcome Guide Deck",
+                        cards: [{ frontText: "Welcome! Click the **JSON** button above to permanently load study files.", frontImg: "", backText: "Decks will save to this browser automatically so you can study anytime.", backImg: "" }]
+                    }
+                }
+            };
+
+            const savedVault = localStorage.getItem('player_vault_system');
+            if (savedVault) { try { fcVault = JSON.parse(savedVault); } catch(e){} }
+
+            let fcQuizDeck = []; let fcCurrentIndex = 0; let fcIsFlipped = false;
+            let fcCorrectCount = 0; let fcWrongCount = 0;
+            let fcAnsweredCards = new Set(); let fcMissedCardObjects = [];
+
+            const fcFlashcard = document.querySelector('#app-flashcard #flashcard');
+            const fcGradingControls = document.querySelector('#app-flashcard #grading-controls');
+            const fcQuizArea = document.querySelector('#app-flashcard #quiz-area');
+            const fcCelebrationScreen = document.querySelector('#app-flashcard #celebration-screen');
+            const fcDeckSelect = document.querySelector('#app-flashcard #deck-select');
+            
+            window.addEventListener('DOMContentLoaded', async () => {
+                try {
+                    const savedVault = await localforage.getItem('player_vault_system');
+                    if (savedVault) { 
+                        fcVault = typeof savedVault === 'string' ? JSON.parse(savedVault) : savedVault; 
+                    }
+                } catch(e) {
+                    console.error("Vault load error:", e);
+                }
+
+                initVaultUI2();
+                loadActiveDeckSession2();
+                // We keep UI preferences in standard localStorage so they load instantly without blinking
+                if(localStorage.getItem('dark_mode_active') === 'true') document.getElementById('app-flashcard').classList.add('dark-mode');
+            });
+
+            fcFlashcard.addEventListener('click', toggleCardFlip2);
+            document.querySelector('#app-flashcard #theme-toggle').addEventListener('click', toggleDarkModeTheme2);
+            document.querySelector('#app-flashcard #prev-btn').addEventListener('click', () => navigateDeck2(-1));
+            document.querySelector('#app-flashcard #next-btn').addEventListener('click', () => navigateDeck2(1));
+            document.querySelector('#app-flashcard #shuffle-btn').addEventListener('click', shuffleCurrentQuizSession2);
+            document.querySelector('#app-flashcard #mark-right').addEventListener('click', () => recordGrade2(true));
+            document.querySelector('#app-flashcard #mark-wrong').addEventListener('click', () => recordGrade2(false));
+            document.querySelector('#app-flashcard #restart-quiz-btn').addEventListener('click', () => startQuizSession2(fcVault.decks[fcVault.activeDeckId].cards));
+            document.querySelector('#app-flashcard #cram-missed-btn').addEventListener('click', () => startQuizSession2(fcMissedCardObjects));
+            
+            document.querySelector('#app-flashcard #import-deck-file').addEventListener('change', importDeckDataJSON2);
+            document.querySelector('#app-flashcard #delete-deck-btn').addEventListener('click', deleteCurrentSubjectVault2);
+            fcDeckSelect.addEventListener('change', (e) => {
+                fcVault.activeDeckId = e.target.value;
+                saveVaultToStorage2();
+                loadActiveDeckSession2();
+            });
+
+            document.querySelector('#app-flashcard #tts-front').addEventListener('click', (e) => { e.stopPropagation(); speakText2(fcQuizDeck[fcCurrentIndex]?.frontText); });
+            document.querySelector('#app-flashcard #tts-back').addEventListener('click', (e) => { e.stopPropagation(); speakText2(fcQuizDeck[fcCurrentIndex]?.backText); });
+
+            async function saveVaultToStorage2() {
+                try {
+                    await localforage.setItem('shared_flashcard_vault', fcVault);
+                    await localforage.setItem('player_vault_backup', fcVault);
+                    await localforage.setItem('player_last_save', new Date().toISOString());
+                } catch(err) {
+                    console.error("Viewer save failed:", err);
+                    alert("Database Error: Unable to save vault data.");
+                }
+            }
+
+            function toggleDarkModeTheme2() {
+                const isDark = document.getElementById('app-flashcard').classList.toggle('dark-mode');
+                localStorage.setItem('dark_mode_active', isDark);
+            }
+
+            function initVaultUI2() {
+                fcDeckSelect.innerHTML = "";
+                Object.keys(fcVault.decks).forEach(id => {
+                    const opt = document.createElement('option');
+                    opt.value = id; opt.textContent = fcVault.decks[id].name; opt.selected = (id === fcVault.activeDeckId);
+                    fcDeckSelect.appendChild(opt);
+                });
+            }
+
+            function loadActiveDeckSession2() { const activeCards = fcVault.decks[fcVault.activeDeckId]?.cards || []; startQuizSession2(activeCards); }
+
+            function deleteCurrentSubjectVault2() {
+                if (Object.keys(fcVault.decks).length <= 1) { alert("You must preserve at least one active subject deck profile."); return; }
+                if (confirm(`Erase "${fcVault.decks[fcVault.activeDeckId].name}" permanently from your browser?`)) {
+                    delete fcVault.decks[fcVault.activeDeckId];
+                    fcVault.activeDeckId = Object.keys(fcVault.decks)[0];
+                    saveVaultToStorage2(); initVaultUI2(); loadActiveDeckSession2();
+                }
+            }
+
+            function startQuizSession2(cardSourceArray) {
+                fcQuizDeck = [...cardSourceArray];
+                fcCurrentIndex = 0; fcCorrectCount = 0; fcWrongCount = 0;
+                fcAnsweredCards.clear(); fcMissedCardObjects = [];
+                fcCelebrationScreen.classList.add('hidden');
+                fcQuizArea.classList.remove('hidden');
+                resetCardFaceAnimation2();
+                renderDeckState2();
+            }
+
+            function shuffleCurrentQuizSession2() {
+                if (fcQuizDeck.length <= 1) return;
+                for (let i = fcQuizDeck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [fcQuizDeck[i], fcQuizDeck[j]] = [fcQuizDeck[j], fcQuizDeck[i]];
+                }
+                startQuizSession2(fcQuizDeck);
+            }
+
+            function speakText2(rawText) {
+                if (!rawText) return; window.speechSynthesis.cancel();
+                const cleanText = rawText.replace(/[\*\`\#\-\_\>]/g, "").replace(/<br>/g, " ");
+                window.speechSynthesis.speak(new SpeechSynthesisUtterance(cleanText));
+            }
+
+            function toggleCardFlip2() {
+                if (fcQuizDeck.length === 0) return;
+                fcIsFlipped = !fcIsFlipped;
+                if (fcIsFlipped) { fcFlashcard.classList.add('is-flipped'); fcGradingControls.classList.remove('invisible'); }
+                else { fcFlashcard.classList.remove('is-flipped'); }
+            }
+
+            function resetCardFaceAnimation2() { fcIsFlipped = false; fcFlashcard.classList.remove('is-flipped'); fcGradingControls.classList.add('invisible'); }
+
+            function navigateDeck2(dir) {
+                if (fcQuizDeck.length === 0) return;
+                resetCardFaceAnimation2(); fcCurrentIndex += dir;
+                if (fcCurrentIndex < 0) fcCurrentIndex = fcQuizDeck.length - 1;
+                else if (fcCurrentIndex >= fcQuizDeck.length) {
+                    if (fcAnsweredCards.size >= fcQuizDeck.length) { showCelebrationSummary2(); return; }
+                    fcCurrentIndex = 0;
+                }
+                setTimeout(renderDeckState2, 150);
+            }
+
+            function recordGrade2(isCorrect) {
+                if (!fcAnsweredCards.has(fcCurrentIndex)) {
+                    fcAnsweredCards.add(fcCurrentIndex);
+                    if (isCorrect) fcCorrectCount++; 
+                    else { fcWrongCount++; fcMissedCardObjects.push(fcQuizDeck[fcCurrentIndex]); }
+                }
+                navigateDeck2(1);
+            }
+
+            function renderDeckState2() {
+                document.querySelector('#app-flashcard #deck-count').textContent = fcQuizDeck.length;
+                if (fcQuizDeck.length === 0) {
+                    document.querySelector('#app-flashcard #view-front-text').innerHTML = "This deck is empty.";
+                    document.querySelector('#app-flashcard #view-back-text').innerHTML = "";
+                    toggleImageEl2('view-front-img', ""); toggleImageEl2('view-back-img', "");
+                    return;
+                }
+
+                const currentCard = fcQuizDeck[fcCurrentIndex];
+                const rorCanvasFront = document.querySelector('#app-flashcard #view-front-ror-canvas');
+                const frontTextEl = document.querySelector('#app-flashcard #view-front-text');
+
+// 1. Check if this card came from the ROR sync
+if (currentCard.rawRorData) {
+    frontTextEl.classList.add('hidden');
+    rorCanvasFront.classList.remove('hidden');
+    
+    // Create an invisible 290x380 bounding box that scales down to fit the flashcard height
+    let lightsMarkup = `<div style="position: relative; width: 290px; height: 380px; transform: scale(0.65); transform-origin: center; margin: 0 auto; flex-shrink: 0;">`;
+    
+    const cData = currentCard.rawRorData;
+    const isDay = cData.lights.some(l => l.color.startsWith('shape-'));
+    
+    // Style background for Day vs Night
+    if (isDay) {
+        rorCanvasFront.style.background = 'linear-gradient(to bottom, #7dd3fc 0%, #e0f2fe 100%)';
+        rorCanvasFront.style.borderColor = '#334155';
+    } else {
+        rorCanvasFront.style.background = '#020203';
+        rorCanvasFront.style.borderColor = '#f59e0b';
+    }
+
+    // Inject lights
+    cData.lights.forEach(light => {
+        if (light.color.startsWith('shape-')) {
+            lightsMarkup += `<div class="day-shape ${light.color}" style="left: ${light.x}px; top: ${light.y}px;"></div>`;
+        } else {
+            const cCls = { red: 'light-red', green: 'light-green', white: 'light-white', yellow: 'light-yellow', 'flash-red': 'light-flash-red', 'flash-yellow': 'light-flash-yellow' }[light.color] || 'light-white';
+            lightsMarkup += `<div class="light-bulb ${cCls}" style="left: ${light.x}px; top: ${light.y}px;"></div>`;
+        }
+    });
+    
+    // Close the invisible wrapper
+    lightsMarkup += `</div>`;
+    
+    // Turn the main canvas into a flex container to perfectly center the wrapper
+    rorCanvasFront.style.display = 'flex';
+    rorCanvasFront.style.alignItems = 'center';
+    rorCanvasFront.style.justifyContent = 'center';
+    rorCanvasFront.innerHTML = lightsMarkup;
+} else {
+    // 2. Standard Flashcard Rendering
+    frontTextEl.classList.remove('hidden');
+    rorCanvasFront.classList.add('hidden');
+    rorCanvasFront.style.display = ''; // Reset display for normal text cards
+    rorCanvasFront.innerHTML = '';
+    frontTextEl.innerHTML = marked.parse(currentCard.frontText || "");
+}
+
+// Back side always uses standard text rendering
+document.querySelector('#app-flashcard #view-back-text').innerHTML = marked.parse(currentCard.backText || "");
+
+                toggleImageEl2('view-front-img', currentCard.frontImg);
+                toggleImageEl2('view-back-img', currentCard.backImg);
+
+                document.querySelector('#app-flashcard #view-front-text').scrollTop = 0;
+                document.querySelector('#app-flashcard #view-back-text').scrollTop = 0;
+
+                document.querySelector('#app-flashcard #progress-text').textContent = `${fcCurrentIndex + 1}/${fcQuizDeck.length}`;
+                document.querySelector('#app-flashcard #progress-bar').style.width = `${((fcCurrentIndex + 1) / fcQuizDeck.length) * 100}%`;
+                document.querySelector('#app-flashcard #stats-correct').textContent = fcCorrectCount;
+                document.querySelector('#app-flashcard #stats-wrong').textContent = fcWrongCount;
+
+                const total = fcCorrectCount + fcWrongCount;
+                document.querySelector('#app-flashcard #score-percent').textContent = total > 0 ? `${Math.round((fcCorrectCount / total) * 100)}%` : "0%";
+            }
+
+            function toggleImageEl2(id, src) {
+                const el = document.querySelector(`#app-flashcard #${id}`);
+                if(src) { el.src = src; el.classList.remove('hidden'); } else el.classList.add('hidden');
+            }
+
+            function showCelebrationSummary2() {
+                fcQuizArea.classList.add('hidden');
+                fcCelebrationScreen.classList.remove('hidden');
+                const total = fcCorrectCount + fcWrongCount;
+                document.querySelector('#app-flashcard #final-score-value').textContent = total > 0 ? `${Math.round((fcCorrectCount / total) * 100)}%` : "0%";
+                
+                const cramBtn = document.querySelector('#app-flashcard #cram-missed-btn');
+                if (fcMissedCardObjects.length > 0) cramBtn.classList.remove('hidden');
+                else cramBtn.classList.add('hidden');
+            }
+
+            function importDeckDataJSON2(e) {
+
+                const reader = new FileReader();
+
+                if (!e.target.files[0]) return;
+
+                reader.onload = function(evt) {
+
+                    try {
+
+                        const parsed = JSON.parse(evt.target.result);
+
+                        let importedCards = [];
+                        let importedDeckName = "Imported Deck";
+
+                        // OLD FORMAT
+                        if (Array.isArray(parsed)) {
+
+                            importedCards = parsed;
+
+                        }
+                        // NEW ROR EXPORT FORMAT
+                        else if (
+                            parsed &&
+                            Array.isArray(parsed.cards)
+                        ) {
+
+                            importedCards = parsed.cards;
+
+                            if (
+                                parsed.deck &&
+                                parsed.deck.name
+                            ) {
+                                importedDeckName =
+                                    parsed.deck.name;
+                            }
+                        }
+
+                        if (importedCards.length === 0) {
+                            alert("No valid cards found.");
+                            return;
+                        }
+
+                        const userName = prompt(
+                            "Name your newly imported deck:",
+                            importedDeckName
+                        );
+
+                        if (!userName) return;
+
+                        const id =
+                            "deck_" + Date.now();
+
+                        fcVault.decks[id] = {
+                            name: userName.trim(),
+                            cards: importedCards
+                        };
+
+                        fcVault.activeDeckId = id;
+
+                        saveVaultToStorage2();
+                        initVaultUI2();
+                        loadActiveDeckSession2();
+
+                        alert(
+                        `Imported ${importedCards.length} cards successfully.`
+                        );
+
+                    }
+                    catch(err) {
+
+                        alert(
+                            "Invalid JSON format: " +
+                            err.message
+            );
+
+        }
+
+    };
+
+    reader.readAsText(e.target.files[0]);
+    e.target.value = '';
+}
+        window.addEventListener(
+    'beforeunload',
+    () => {
+        saveVaultToStorage2();
+    }
+);
+    </script>
+</body>
+</html>
