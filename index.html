@@ -22,12 +22,6 @@
         // ===== STORAGE KEYS =====
         const FLASHCARD_VAULT_KEY = 'shared_flashcard_vault';
 
-        const ROR_DECKS_KEY = 'ror_custom_decks';
-        const ROR_CARDS_KEY = 'ror_offline_ultimate_cards';
-
-        const VIEWER_DECKS_KEY = 'ror_viewer_decks';
-        const VIEWER_CARDS_KEY = 'ror_viewer_cards';
-
         const LAST_SAVE_KEY = 'studio_last_save';
         const DATABASE_VERSION = 1;
 
@@ -342,7 +336,7 @@
         <main>
             <section id="section-study">
                 <div class="deck-header">
-                    <div class="sets-scroll" id="decks-container"></div>
+                    <select id="decks-container" class="form-input" style="min-width: 200px; font-weight: bold; font-size: 0.85rem;" onchange="loadSet(this.value)"></select>
                     <div class="deck-actions-wrapper" id="deck-actions-container">
                         
                         <button onclick="document.getElementById('json-upload').click()" class="action-icon-btn" title="Import backup JSON file" style="color: var(--accent-cyan); border-color: rgba(56, 189, 248, 0.3);">
@@ -471,6 +465,14 @@
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-4 items-end justify-between">
                 <div class="flex-1 w-full">
                     <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">🗃️ Active Study Deck</label>
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mt-4">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-indigo-500 mb-3 flex items-center gap-2"><span>🔀</span> Mixed Practice Mode</h3>
+                        <div id="mixed-decks-checkboxes" class="space-y-2 max-h-40 overflow-y-auto mb-4 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                            </div>
+                        <button onclick="startMixedDeckPractice2()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-xl transition text-sm shadow-sm">
+                            Start Scrambled Mix Practice
+                        </button>
+                    </div>
                     <div class="flex gap-2">
                         <select id="deck-select" class="flex-1 p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"></select>
                         <button id="delete-deck-btn" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl text-xs font-bold transition border border-rose-200">🗑️ Delete</button>
@@ -623,10 +625,10 @@
             await checkDatabaseVersion();
             
             try {
-                const localCards = await localforage.getItem('ror_viewer_cards');
+                const localCards = await localforage.getItem('ror_offline_ultimate_cards');
                 if (localCards) { loadedCards = typeof localCards === 'string' ? JSON.parse(localCards) : localCards; }
                 
-                const localDecks = await localforage.getItem('ror_viewer_decks');
+                const localDecks = await localforage.getItem('ror_custom_decks');
                 if (localDecks) {
                     loadedDecks = typeof localDecks === 'string' ? JSON.parse(localDecks) : localDecks;
                     if (loadedDecks.length > 0) currentSet = loadedDecks[0].id; 
@@ -656,25 +658,39 @@
             }
         });
 
-        function renderDeckTabs() {
+       function renderDeckTabs() {
             const container = document.getElementById('decks-container');
-            if (loadedDecks.length === 0) { container.innerHTML = '<span style="color: var(--accent-cyan);">No decks loaded. Please Import JSON.</span>'; return; }
-            container.innerHTML = '<span>Decks:</span>';
+            container.innerHTML = ''; // Clear previous options
+            
+            if (loadedDecks.length === 0) { 
+                const opt = document.createElement('option');
+                opt.value = "";
+                opt.innerText = "No decks loaded. Please Import JSON.";
+                container.appendChild(opt);
+                container.disabled = true;
+                return; 
+            }
+            
+            container.disabled = false;
             loadedDecks.forEach(deck => {
-                const btn = document.createElement('button');
-                btn.className = `set-selector-btn ${currentSet === deck.id ? 'active' : ''}`;
-                btn.id = `setbtn-${deck.id}`;
-                btn.innerText = deck.name;
-                btn.onclick = () => loadSet(deck.id);
-                container.appendChild(btn);
+                const opt = document.createElement('option');
+                opt.value = deck.id;
+                
+                // CORRECTED LOGIC: Filter the loadedCards array to find cards belonging to this deck
+                const cardCount = loadedCards.filter(card => card.set === deck.id).length;
+                
+                opt.innerText = `${deck.name} (${cardCount})`;
+                
+                if (currentSet === deck.id) opt.selected = true;
+                container.appendChild(opt);
             });
         }
 
         async function saveData() {
             try {
                 // localForage automatically stringifies data, so we just pass the array
-                await localforage.setItem('ror_viewer_decks', loadedDecks);
-                await localforage.setItem('ror_viewer_cards', loadedCards);
+                await localforage.setItem('ror_custom_decks', loadedDecks);
+                await localforage.setItem('ror_offline_ultimate_cards', loadedCards);
             } catch(err) {
                 console.error("ROR Save failed:", err);
             }
@@ -706,9 +722,12 @@
 
         function loadSet(setId) {
             currentSet = setId;
-            document.querySelectorAll('#app-ror .set-selector-btn').forEach(btn => btn.classList.remove('active'));
-            const activeBtn = document.getElementById(`setbtn-${setId}`);
-            if(activeBtn) activeBtn.classList.add('active');
+            
+            // Sync the dropdown menu with the active set
+            const dropdown = document.getElementById('decks-container');
+            if (dropdown && dropdown.value !== setId) {
+                dropdown.value = setId;
+            }
 
             const container = document.getElementById('study-cards-grid');
             if(!container) return;
@@ -996,56 +1015,57 @@
             }
         }
         async function syncToFlashcards() {
-    if (!currentSet) { showOfflineAlert("No deck selected to sync."); return; }
-    
-    const sourceDeck = loadedDecks.find(d => d.id === currentSet);
-    const sourceCards = loadedCards.filter(c => c.set === currentSet);
-    
-    if (sourceCards.length === 0) { showOfflineAlert("This deck is empty!"); return; }
+                if (!currentSet) { showOfflineAlert("No deck selected to sync."); return; }
+                
+                const sourceDeck = loadedDecks.find(d => d.id === currentSet);
+                const sourceCards = loadedCards.filter(c => c.set === currentSet);
+                
+                if (sourceCards.length === 0) { showOfflineAlert("This deck is empty!"); return; }
 
-    // Helper to check if data actually exists and isn't just "N/A" or blank spaces
-    const hasData = (val) => val && val.toString().trim() !== '' && val.toString().trim().toUpperCase() !== 'N/A';
+                // Helper to check if data actually exists and isn't just "N/A" or blank spaces
+                const hasData = (val) => val && val.toString().trim() !== '' && val.toString().trim().toUpperCase() !== 'N/A';
 
-    // Map ROR cards into Flashcard format dynamically
-    const syncedCards = sourceCards.map(c => {
-        let dynamicBackText = `### ${c.title || 'Unknown Vessel'}\n\n`;
-        
-        if (hasData(c.length)) dynamicBackText += `**Length:** ${c.length}\n`;
-        if (hasData(c.vesselFunction)) dynamicBackText += `**Function:** ${c.vesselFunction}\n`;
-        if (hasData(c.status)) dynamicBackText += `**Status:** ${c.status}\n`;
-        if (hasData(c.aspect)) dynamicBackText += `**Aspect:** ${c.aspect}\n`;
-        if (hasData(c.daySignal)) dynamicBackText += `**Day Signal:** ${c.daySignal}\n`;
-        if (hasData(c.soundSignal)) dynamicBackText += `**Sound Signal:** ${c.soundSignal}\n`;
-        if (hasData(c.rule)) dynamicBackText += `**Rule:** ${c.rule}\n`;
-        
-        if (hasData(c.action)) dynamicBackText += `\n**Action / Maneuver:**\n${c.action}\n`;
+                // Map ROR cards into Flashcard format dynamically
+                const syncedCards = sourceCards.map(c => {
+                    let dynamicBackText = `### ${c.title || 'Unknown Vessel'}\n\n`;
+                    
+                    if (hasData(c.length)) dynamicBackText += `**Length:** ${c.length}\n`;
+                    if (hasData(c.vesselFunction)) dynamicBackText += `**Function:** ${c.vesselFunction}\n`;
+                    if (hasData(c.status)) dynamicBackText += `**Status:** ${c.status}\n`;
+                    if (hasData(c.aspect)) dynamicBackText += `**Aspect:** ${c.aspect}\n`;
+                    if (hasData(c.daySignal)) dynamicBackText += `**Day Signal:** ${c.daySignal}\n`;
+                    if (hasData(c.soundSignal)) dynamicBackText += `**Sound Signal:** ${c.soundSignal}\n`;
+                    if (hasData(c.rule)) dynamicBackText += `**Rule:** ${c.rule}\n`;
+                    
+                    if (hasData(c.action)) dynamicBackText += `\n**Action / Maneuver:**\n${c.action}\n`;
 
-        return {
-            frontText: "", 
-            backText: dynamicBackText.trim(),
-            rawRorData: c // Attach raw data for the canvas renderer
-        };
-    });
+                    return {
+                        frontText: "", 
+                        backText: dynamicBackText.trim(),
+                        rawRorData: c,             // Retained for backward compatibility
+                        rorLights: c.lights        // Added for 100% editor.html compatibility
+                    };
+                });
 
-    const newDeckId = "sync_" + Date.now();
-    fcVault.decks[newDeckId] = {
-        name: "⚓ ROR: " + sourceDeck.name,
-        cards: syncedCards
-    };
-    fcVault.activeDeckId = newDeckId;
+                const newDeckId = "sync_" + Date.now();
+                fcVault.decks[newDeckId] = {
+                    name: "⚓ ROR: " + sourceDeck.name,
+                    cards: syncedCards
+                };
+                fcVault.activeDeckId = newDeckId;
 
-    await saveVaultToStorage2();
-    initVaultUI2(); 
-    loadActiveDeckSession2(); 
-    
-    showOfflineAlert(`Successfully synced to Flashcards! Return to the Hub to practice.`);
-}
+                await saveVaultToStorage2();
+                initVaultUI2(); 
+                loadActiveDeckSession2(); 
+                
+                showOfflineAlert(`Successfully synced to Flashcards! Return to the Hub to practice.`);
+            }
 
        async function wipeAllData() {
             const doubleCheck = confirm("⚠️ WARNING: This will permanently delete ALL imported decks, cards, and practice stats from this device. Proceed?");
             if (doubleCheck) {
-                await localforage.removeItem('ror_viewer_decks'); 
-                await localforage.removeItem('ror_viewer_cards');
+                await localforage.removeItem('ror_custom_decks'); 
+                await localforage.removeItem('ror_offline_ultimate_cards');
                 loadedDecks = []; loadedCards = []; currentSet = null; practiceQueue = []; practiceMastered = 0; quizStats = { correct: 0, total: 0 };
                 renderDeckTabs(); loadSet(null);
                 document.getElementById('quiz-score').innerText = "Score: 0 / 0";
@@ -1076,6 +1096,7 @@
             });
             html += `</table></body></html>`; printWindow.document.write(html); printWindow.document.close();
         }
+
     </script>
 
     <script>
@@ -1161,6 +1182,22 @@
                     opt.value = id; opt.textContent = fcVault.decks[id].name; opt.selected = (id === fcVault.activeDeckId);
                     fcDeckSelect.appendChild(opt);
                 });
+                const mixedContainer = document.getElementById('mixed-decks-checkboxes');
+                    if (mixedContainer) {
+                        mixedContainer.innerHTML = '';
+                        Object.keys(fcVault.decks).forEach(id => {
+                            const deck = fcVault.decks[id];
+                            const cardCount = deck.cards ? deck.cards.length : 0;
+                            
+                            const div = document.createElement('div');
+                            div.className = "flex items-center gap-3 p-1.5 hover:bg-gray-100 rounded transition text-gray-700 text-sm dark:hover:bg-slate-700/50";
+                            div.innerHTML = `
+                                <input type="checkbox" value="${id}" class="mixed-deck-cb w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                <label class="cursor-pointer select-none flex-1 truncate font-medium dark:text-slate-200">${deck.name} <span class="text-xs text-gray-500">(${cardCount} cards)</span></label>
+                            `;
+                            mixedContainer.appendChild(div);
+                        });
+                    }
             }
 
             function loadActiveDeckSession2() { const activeCards = fcVault.decks[fcVault.activeDeckId]?.cards || []; startQuizSession2(activeCards); }
@@ -1241,35 +1278,36 @@
                 const rorCanvasFront = document.querySelector('#app-flashcard #view-front-ror-canvas');
                 const frontTextEl = document.querySelector('#app-flashcard #view-front-text');
 
-// 1. Check if this card came from the ROR sync
-if (currentCard.rawRorData) {
-    frontTextEl.classList.add('hidden');
-    rorCanvasFront.classList.remove('hidden');
-    
-    // Create an invisible 290x380 bounding box that scales down to fit the flashcard height
-    let lightsMarkup = `<div style="position: relative; width: 290px; height: 380px; transform: scale(0.65); transform-origin: center; margin: 0 auto; flex-shrink: 0;">`;
-    
-    const cData = currentCard.rawRorData;
-    const isDay = cData.lights.some(l => l.color.startsWith('shape-'));
-    
-    // Style background for Day vs Night
-    if (isDay) {
-        rorCanvasFront.style.background = 'linear-gradient(to bottom, #7dd3fc 0%, #e0f2fe 100%)';
-        rorCanvasFront.style.borderColor = '#334155';
-    } else {
-        rorCanvasFront.style.background = '#020203';
-        rorCanvasFront.style.borderColor = '#f59e0b';
-    }
+                // 1. Check if this card came from the ROR sync
+                const rorLightsArray = currentCard.rawRorData ? currentCard.rawRorData.lights : currentCard.rorLights;
 
-    // Inject lights
-    cData.lights.forEach(light => {
-        if (light.color.startsWith('shape-')) {
-            lightsMarkup += `<div class="day-shape ${light.color}" style="left: ${light.x}px; top: ${light.y}px;"></div>`;
-        } else {
-            const cCls = { red: 'light-red', green: 'light-green', white: 'light-white', yellow: 'light-yellow', 'flash-red': 'light-flash-red', 'flash-yellow': 'light-flash-yellow' }[light.color] || 'light-white';
-            lightsMarkup += `<div class="light-bulb ${cCls}" style="left: ${light.x}px; top: ${light.y}px;"></div>`;
-        }
-    });
+                if (rorLightsArray && rorLightsArray.length > 0) {
+                    frontTextEl.classList.add('hidden');
+                    rorCanvasFront.classList.remove('hidden');
+                    
+                    // Create an invisible 290x380 bounding box that scales down to fit the flashcard height
+                    let lightsMarkup = `<div style="position: relative; width: 290px; height: 380px; transform: scale(0.65); transform-origin: center; margin: 0 auto; flex-shrink: 0;">`;
+                    
+                    const isDay = rorLightsArray.some(l => l.color.startsWith('shape-'));
+                    
+                    // Style background for Day vs Night
+                    if (isDay) {
+                        rorCanvasFront.style.background = 'linear-gradient(to bottom, #7dd3fc 0%, #e0f2fe 100%)';
+                        rorCanvasFront.style.borderColor = '#334155';
+                    } else {
+                        rorCanvasFront.style.background = '#020203';
+                        rorCanvasFront.style.borderColor = '#f59e0b';
+                    }
+
+                    // Inject lights
+                    rorLightsArray.forEach(light => {
+                        if (light.color.startsWith('shape-')) {
+                            lightsMarkup += `<div class="day-shape ${light.color}" style="left: ${light.x}px; top: ${light.y}px;"></div>`;
+                        } else {
+                            const cCls = { red: 'light-red', green: 'light-green', white: 'light-white', yellow: 'light-yellow', 'flash-red': 'light-flash-red', 'flash-yellow': 'light-flash-yellow' }[light.color] || 'light-white';
+                            lightsMarkup += `<div class="light-bulb ${cCls}" style="left: ${light.x}px; top: ${light.y}px;"></div>`;
+                        }
+                    });
     
     // Close the invisible wrapper
     lightsMarkup += `</div>`;
@@ -1411,6 +1449,42 @@ document.querySelector('#app-flashcard #view-back-text').innerHTML = marked.pars
         saveVaultToStorage2();
     }
 );
+
+function scrambleArray2(array) {
+    let shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
+function startMixedDeckPractice2() {
+    const checkboxes = document.querySelectorAll('.mixed-deck-cb:checked');
+    if (checkboxes.length === 0) {
+        alert("Please select at least one deck to practice.");
+        return;
+    }
+
+    let combinedCards = [];
+
+    checkboxes.forEach(cb => {
+        const deckId = cb.value;
+        const deck = fcVault.decks[deckId];
+        if (deck && deck.cards && deck.cards.length > 0) {
+            const clonedCards = JSON.parse(JSON.stringify(deck.cards));
+            combinedCards = combinedCards.concat(clonedCards);
+        }
+    });
+
+    if (combinedCards.length === 0) {
+        alert("The selected decks do not contain any cards.");
+        return;
+    }
+
+    const practiceDeck = scrambleArray2(combinedCards);
+    startQuizSession2(practiceDeck);
+}
     </script>
 </body>
 </html>
