@@ -12,12 +12,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-    <script>
-        localforage.config({
-            name: 'StudentLearningHub',
-            storeName: 'hub_data'
-        });
-    </script>
 
 <script>
         // Synchronized Database Configuration
@@ -25,6 +19,17 @@
             name: 'UnifiedLearningHub_SharedDB',
             storeName: 'shared_hub_data'
         });
+        // ===== STORAGE KEYS =====
+        const FLASHCARD_VAULT_KEY = 'shared_flashcard_vault';
+
+        const ROR_DECKS_KEY = 'ror_custom_decks';
+        const ROR_CARDS_KEY = 'ror_offline_ultimate_cards';
+
+        const VIEWER_DECKS_KEY = 'ror_viewer_decks';
+        const VIEWER_CARDS_KEY = 'ror_viewer_cards';
+
+        const LAST_SAVE_KEY = 'studio_last_save';
+        const DATABASE_VERSION = 1;
 
         // Fixed Service Worker Chain
         if ('serviceWorker' in navigator) {
@@ -36,6 +41,43 @@
                 }
             });
         }
+        async function checkDatabaseVersion() {
+
+                    const savedVersion =
+                        await localforage.getItem('database_version');
+
+                    if (!savedVersion) {
+
+                        await localforage.setItem(
+                            'database_version',
+                            DATABASE_VERSION
+                        );
+
+                        console.log(
+                            'Database initialized v' +
+                            DATABASE_VERSION
+                        );
+
+                        return;
+                    }
+
+                    if (savedVersion < DATABASE_VERSION) {
+
+                        console.log(
+                            'Database upgrade needed:',
+                            savedVersion,
+                            '->',
+                            DATABASE_VERSION
+                        );
+
+                        // future migration code goes here
+
+                        await localforage.setItem(
+                            'database_version',
+                            DATABASE_VERSION
+                        );
+                    }
+                }
     </script>
 
     <style>
@@ -578,6 +620,7 @@
         window.addEventListener('DOMContentLoaded', async () => {
             // Note: I added saveData() to this interval so both apps save automatically
             setInterval(() => { saveVaultToStorage2(); saveData(); }, 30000); 
+            await checkDatabaseVersion();
             
             try {
                 const localCards = await localforage.getItem('ror_viewer_cards');
@@ -1046,8 +1089,6 @@
                 }
             };
 
-            const savedVault = localStorage.getItem('player_vault_system');
-            if (savedVault) { try { fcVault = JSON.parse(savedVault); } catch(e){} }
 
             let fcQuizDeck = []; let fcCurrentIndex = 0; let fcIsFlipped = false;
             let fcCorrectCount = 0; let fcWrongCount = 0;
@@ -1060,8 +1101,9 @@
             const fcDeckSelect = document.querySelector('#app-flashcard #deck-select');
             
             window.addEventListener('DOMContentLoaded', async () => {
+                await checkDatabaseVersion();
                 try {
-                    const savedVault = await localforage.getItem('player_vault_system');
+                    const savedVault = await localforage.getItem('FLASHCARD_VAULT_KEY');
                     if (savedVault) { 
                         fcVault = typeof savedVault === 'string' ? JSON.parse(savedVault) : savedVault; 
                     }
@@ -1098,7 +1140,7 @@
 
             async function saveVaultToStorage2() {
                 try {
-                    await localforage.setItem('shared_flashcard_vault', fcVault);
+                    await localforage.setItem('FLASHCARD_VAULT_KEY', fcVault);
                     await localforage.setItem('player_vault_backup', fcVault);
                     await localforage.setItem('player_last_save', new Date().toISOString());
                 } catch(err) {
