@@ -465,17 +465,18 @@
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-4 items-end justify-between">
                 <div class="flex-1 w-full">
                     <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">🗃️ Active Study Deck</label>
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mt-4">
-                        <h3 class="text-sm font-bold uppercase tracking-wider text-indigo-500 mb-3 flex items-center gap-2"><span>🔀</span> Mixed Practice Mode</h3>
+
+                    <div class="flex gap-2">
+                        <select id="deck-select" class="flex-1 p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"></select>
+                        <button id="delete-deck-btn" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl text-xs font-bold transition border border-rose-200">🗑️ Delete</button>
+                    </div>
+                                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mt-4">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-indigo-500 mb-3 flex #00cc54items-center gap-2"><span>🔀</span> Mixed Practice Mode</h3>
                         <div id="mixed-decks-checkboxes" class="space-y-2 max-h-40 overflow-y-auto mb-4 p-2 bg-gray-50 rounded-lg border border-gray-200">
                             </div>
                         <button onclick="startMixedDeckPractice2()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-xl transition text-sm shadow-sm">
                             Start Scrambled Mix Practice
                         </button>
-                    </div>
-                    <div class="flex gap-2">
-                        <select id="deck-select" class="flex-1 p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"></select>
-                        <button id="delete-deck-btn" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl text-xs font-bold transition border border-rose-200">🗑️ Delete</button>
                     </div>
                 </div>
                 
