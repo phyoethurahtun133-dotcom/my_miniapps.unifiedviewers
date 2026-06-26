@@ -833,62 +833,89 @@
 
         function importJSON(event) {
             const file = event.target.files[0]; if (!file) return;
+            // Get the filename to use as a default deck name if metadata is missing
             const fileNameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
             const reader = new FileReader();
+            
             reader.onload = function(e) {
                 try {
-                    const data = JSON.parse(e.target.result);
+                    const data = JSON.parse(e.target.result); 
+                    const cardsToImport = Array.isArray(data) ? data : (data.cards || []);
                     
-                    // FIX: Check for either 'decks' (array) or 'deck' (singular object)
-                    if ((!data.decks && !data.deck) || !data.cards) { 
-                        showOfflineAlert("Invalid JSON file. Please ensure it's a valid ROR Backup file."); 
+                    if (cardsToImport.length === 0) { 
+                        alert("No compatible cards found inside this JSON payload."); 
                         return; 
                     }
+                    
+                    let targetDeckId = null;
 
-                    // Normalize deck data into an array so the rest of the code works as expected
-                    let incomingDecks = [];
-                    if (data.decks && Array.isArray(data.decks)) {
-                        incomingDecks = data.decks;
-                    } else if (data.deck) {
-                        incomingDecks = [data.deck];
+                    // Case 1: JSON has deck metadata (Native ROR Export)
+                    if (data.deck && data.deck.name) {
+                        const createNewDeck = confirm(`Create a new deck called "${data.deck.name}"?\n\nOK = New Deck\nCancel = Import into current deck`);
+                        if (createNewDeck || loadedDecks.length === 0) {
+                            targetDeckId = "deck_" + Date.now();
+                            loadedDecks.push({ id: targetDeckId, name: data.deck.name, custom: true });
+                        } else {
+                            targetDeckId = currentSet;
+                        }
+                    } 
+                    // Case 2: JSON lacks deck metadata (Flashcard Export)
+                    else {
+                        const createNewDeck = confirm(`This file is missing deck metadata. Create a new deck named "${fileNameWithoutExt}"?\n\nOK = New Deck\nCancel = Import into current deck`);
+                        if (createNewDeck || loadedDecks.length === 0) {
+                            targetDeckId = "deck_" + Date.now();
+                            const userName = prompt("Name your new deck:", fileNameWithoutExt);
+                            loadedDecks.push({ id: targetDeckId, name: userName ? userName.trim() : fileNameWithoutExt, custom: true });
+                        } else {
+                            targetDeckId = currentSet;
+                        }
                     }
 
-                    const activeDeckIds = new Set(data.cards.map(card => card.set));
-                    let filteredDecks = incomingDecks.filter(deck => activeDeckIds.has(deck.id));
+                    // Process and map the incoming cards
+                    cardsToImport.forEach((card, index) => {
+                        let rorCard = {};
+                        
+                        // Check if this card came from the Flashcard App (which wraps original ROR data in rawRorData)
+                        if (card.rawRorData) {
+                            rorCard = { ...card.rawRorData };
+                            if (card.rorLights && card.rorLights.length > 0) rorCard.lights = card.rorLights;
+                        } 
+                        // Check if it's a native Flashcard (pure text, no ROR data)
+                        else if (card.frontText || card.backText) {
+                            rorCard = {
+                                title: card.frontText ? card.frontText.replace(/<[^>]*>?/gm, '').substring(0, 30) : `Imported Card ${index + 1}`,
+                                action: card.backText ? card.backText.replace(/<[^>]*>?/gm, '') : "",
+                                lights: card.rorLights || [],
+                                rule: "ColRegs"
+                            };
+                        } 
+                        // Otherwise, it's already a native ROR card
+                        else {
+                            rorCard = { ...card };
+                        }
 
-                    if (filteredDecks.length === 0 && incomingDecks.length > 0) {
-                        filteredDecks = [incomingDecks[0]];
-                        data.cards.forEach(card => card.set = filteredDecks[0].id);
-                    }
-
-                    const incomingCards = data.cards;
-                    const timestamp = Date.now();
-
-                    filteredDecks.forEach((deck, deckIdx) => {
-                        const oldDeckId = deck.id;
-                        const newDeckId = `deck_${timestamp}_${deckIdx}`;
-                        deck.id = newDeckId;
-                        deck.name = fileNameWithoutExt + (filteredDecks.length > 1 ? ` (${deckIdx + 1})` : '');
-                        incomingCards.forEach((card, cardIdx) => {
-                            if (card.set === oldDeckId) { card.set = newDeckId; }
-                            card.id = `card_${timestamp}_${deckIdx}_${cardIdx}`;
-                        });
+                        // Finalize required ROR ID and properties
+                        rorCard.set = targetDeckId;
+                        rorCard.id = "custom-" + Date.now() + "-" + Math.floor(Math.random() * 100000);
+                        if (!rorCard.lights) rorCard.lights = [];
+                        
+                        loadedCards.push(rorCard);
                     });
 
-                    loadedDecks = [...loadedDecks, ...filteredDecks]; 
-                    loadedCards = [...loadedCards, ...incomingCards]; 
-                    saveData(); 
-
-                    if (filteredDecks.length > 0) { currentSet = filteredDecks[0].id; }
-                    renderDeckTabs(); loadSet(currentSet);
-                    showOfflineAlert(`Successfully added "${fileNameWithoutExt}" to your collection!`);
+                    currentSet = targetDeckId;
+                    saveData();
+                    loadSet(currentSet);
+                    renderDeckTabs();
+                    alert(`Successfully imported ${cardsToImport.length} cards!`);
                 } catch (err) { 
-                    showOfflineAlert("Error reading JSON file. It may be corrupted."); 
+                    alert("Malformed JSON data structure: " + err.message); 
                 }
-                document.getElementById('json-upload').value = ''; 
+                event.target.value = ''; // Reset the file input
             };
             reader.readAsText(file);
         }
+
+
         function populatePracticeDecks() {
             const select = document.getElementById('practice-deck-select');
             select.innerHTML = '<option value="all">All Decks (Mixed Stack)</option>';
@@ -1370,94 +1397,82 @@
             }
 
             function importDeckDataJSON2(e) {
-
-                const reader = new FileReader();
-
-                if (!e.target.files[0]) return;
-
+                const reader = new FileReader(); 
+                if(!e.target.files[0]) return;
+                
                 reader.onload = function(evt) {
-
                     try {
-
                         const parsed = JSON.parse(evt.target.result);
+                        let cardsToImport = [];
+                        let defaultName = "Imported Deck";
 
-                        let importedCards = [];
-                        let importedDeckName = "Imported Deck";
+                        // DETECT ROR FORMAT: Has 'deck' and 'cards' properties
+                        if (parsed.deck && parsed.cards) {
+                            defaultName = parsed.deck.name || "ROR Export Deck";
+                            
+                            // Translate ROR data into Flashcard data format
+                            cardsToImport = parsed.cards.map(c => {
+                                const parts = [];
+                                if (c.title) parts.push(`Vessel: ${c.title}`);
+                                if (c.length) parts.push(`Length: ${c.length}`);
+                                if (c.vesselFunction) parts.push(`Function: ${c.vesselFunction}`);
+                                if (c.status) parts.push(`Status: ${c.status}`);
+                                if (c.aspect) parts.push(`Aspect: ${c.aspect}`);
+                                if (c.daySignal) parts.push(`Day Signal: ${c.daySignal}`);
+                                if (c.soundSignal) parts.push(`Sound Signal: ${c.soundSignal}`);
+                                if (c.rule) parts.push(`Rule: ${c.rule}`);
+                                if (c.action) parts.push(`Action: ${c.action}`);
 
-                        // OLD FORMAT
-                        if (Array.isArray(parsed)) {
-
-                            importedCards = parsed;
-
-                        }
-                        // NEW ROR EXPORT FORMAT
-                        else if (
-                            parsed &&
-                            Array.isArray(parsed.cards)
-                        ) {
-
-                            importedCards = parsed.cards;
-
-                            if (
-                                parsed.deck &&
-                                parsed.deck.name
-                            ) {
-                                importedDeckName =
-                                    parsed.deck.name;
+                                return {
+                                    frontText: "",
+                                    rawRorData: c, 
+                                    rorLights: c.lights || [],
+                                    backText: parts.join('\n\n'),
+                                    frontImg: "",
+                                    backImg: ""
+                                };
+                            });
+                        } 
+                        // DETECT NATIVE FLASHCARD FORMAT: Pure Array
+                        else if (Array.isArray(parsed)) {
+                            cardsToImport = parsed;
+                        } else if (parsed && Array.isArray(parsed.cards)) {
+                            cardsToImport = parsed.cards;
+                            if (parsed.deck && parsed.deck.name) {
+                                defaultName = parsed.deck.name;
                             }
+                        } else {
+                            throw new Error("Unrecognized JSON format");
                         }
 
-                        if (importedCards.length === 0) {
-                            alert("No valid cards found.");
-                            return;
+                        if(cardsToImport.length > 0) {
+                            const name = prompt("Name your newly imported deck profile:", defaultName);
+                            if(!name) return;
+                            
+                            const id = "deck_" + Date.now(); 
+                            fcVault.decks[id] = { name: name.trim(), cards: cardsToImport }; 
+                            fcVault.activeDeckId = id;
+                            
+                            saveVaultToStorage2(); 
+                            initVaultUI2(); 
+                            loadActiveDeckSession2();
+                            alert(`Successfully imported ${cardsToImport.length} cards!`);
                         }
-
-                        const userName = prompt(
-                            "Name your newly imported deck:",
-                            importedDeckName
-                        );
-
-                        if (!userName) return;
-
-                        const id =
-                            "deck_" + Date.now();
-
-                        fcVault.decks[id] = {
-                            name: userName.trim(),
-                            cards: importedCards
-                        };
-
-                        fcVault.activeDeckId = id;
-
-                        saveVaultToStorage2();
-                        initVaultUI2();
-                        loadActiveDeckSession2();
-
-                        alert(
-                        `Imported ${importedCards.length} cards successfully.`
-                        );
-
+                    } catch(err) { 
+                        alert("Corrupted file format structured inputs: " + err.message); 
                     }
-                    catch(err) {
+                };
+                reader.readAsText(e.target.files[0]);
+                e.target.value = '';
+            }
 
-                        alert(
-                            "Invalid JSON format: " +
-                            err.message
+
+                    window.addEventListener(
+                'beforeunload',
+                () => {
+                    saveVaultToStorage2();
+                }
             );
-
-        }
-
-    };
-
-    reader.readAsText(e.target.files[0]);
-    e.target.value = '';
-}
-        window.addEventListener(
-    'beforeunload',
-    () => {
-        saveVaultToStorage2();
-    }
-);
 
 function scrambleArray2(array) {
     let shuffled = [...array];
