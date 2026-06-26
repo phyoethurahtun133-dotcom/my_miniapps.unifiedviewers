@@ -11,7 +11,9 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+    <script src="shared-data.js"></script>
 
 <script>
         // Synchronized Database Configuration
@@ -465,13 +467,12 @@
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-4 items-end justify-between">
                 <div class="flex-1 w-full">
                     <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">🗃️ Active Study Deck</label>
-
                     <div class="flex gap-2">
                         <select id="deck-select" class="flex-1 p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"></select>
                         <button id="delete-deck-btn" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl text-xs font-bold transition border border-rose-200">🗑️ Delete</button>
                     </div>
-                                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mt-4">
-                        <h3 class="text-sm font-bold uppercase tracking-wider text-indigo-500 mb-3 flex #00cc54items-center gap-2"><span>🔀</span> Mixed Practice Mode</h3>
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mt-4">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-indigo-500 mb-3 flex items-center gap-2"><span>🔀</span> Mixed Practice Mode</h3>
                         <div id="mixed-decks-checkboxes" class="space-y-2 max-h-40 overflow-y-auto mb-4 p-2 bg-gray-50 rounded-lg border border-gray-200">
                             </div>
                         <button onclick="startMixedDeckPractice2()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-xl transition text-sm shadow-sm">
@@ -502,24 +503,25 @@
 
                 <div class="perspective-1000 w-full h-96 group">
                     <div id="flashcard" class="w-full h-full relative transform-style-3d transition-transform duration-500 cursor-pointer select-none rounded-2xl shadow-md border border-gray-200/60">
-                        <div class="absolute inset-0 backface-hidden bg-white rounded-2xl p-6 flex flex-col justify-between items-start text-left">
+                        <div class="absolute inset-0 backface-hidden bg-white rounded-2xl p-3 flex flex-col justify-between items-start text-left">
                             <div class="w-full flex justify-between items-center mb-2">
                                 <span class="text-xs font-bold uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2.5 py-1 rounded-md">Front (Question)</span>
                                 <button id="tts-front" class="bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-gray-200 text-xs font-bold px-2.5 py-1 rounded-lg transition">🔊 Speak</button>
                             </div>
                             <div class="flex-1 w-full flex flex-col justify-center items-center gap-3 overflow-hidden my-1 relative">
-                            <div id="view-front-ror-canvas" class="hidden relative bg-[#020203] rounded-xl border-4 border-[#f59e0b] mx-auto shadow-inner overflow-hidden flex-shrink-0" style="width: 200px; height: 260px;"></div>                                    <img id="view-front-img" src="" class="hidden max-h-32 object-contain rounded-lg max-w-full" alt="Front Illustration">
+                            <div id="view-front-ror-canvas" class="hidden relative bg-[#020203] rounded-xl border-4 border-[#f59e0b] mx-auto shadow-inner overflow-hidden flex-shrink-0" style="width: 200px; height: 260px;"></div>                                    
+                                <img id="view-front-img" src="" class="hidden max-h-[98%] object-contain rounded-lg max-w-full" alt="Front Illustration">
                                 <div id="view-front-text" class="card-scrollbar markdown-body w-full text-base sm:text-lg font-semibold text-gray-800 text-left overflow-y-auto pr-2 max-h-full"></div>
                             </div>
                             <span class="text-xs text-gray-400 italic self-center mt-2">💡 Click anywhere on the card to flip</span>
                         </div>
-                        <div class="absolute inset-0 backface-hidden rotate-y-180 bg-indigo-900 rounded-2xl p-6 flex flex-col justify-between items-start text-left text-white">
+                        <div class="absolute inset-0 backface-hidden rotate-y-180 bg-indigo-900 rounded-2xl p-3 flex flex-col justify-between items-start text-left text-white">
                             <div class="w-full flex justify-between items-center mb-2">
                                 <span class="text-xs font-bold uppercase tracking-widest text-indigo-300 bg-indigo-950/50 px-2.5 py-1 rounded-md">Back (Answer)</span>
                                 <button id="tts-back" class="bg-indigo-950/50 hover:bg-indigo-950 text-indigo-200 text-xs font-bold px-2.5 py-1 rounded-lg transition">🔊 Speak</button>
                             </div>
                             <div class="flex-1 w-full flex flex-col justify-center items-center gap-3 overflow-hidden my-1">
-                                <img id="view-back-img" src="" class="hidden max-h-32 object-contain rounded-lg max-w-full" alt="Back Illustration">
+                                <img id="view-back-img" src="" class="hidden max-h-[98%] object-contain rounded-lg max-w-full" alt="Back Illustration">
                                 <div id="view-back-text" class="card-scrollbar markdown-body w-full text-base sm:text-lg font-medium text-indigo-100 text-left overflow-y-auto pr-2 max-h-full"></div>
                             </div>
                             <span class="text-xs text-indigo-300/70 italic self-center mt-2">🔄 Click again to flip back</span>
@@ -597,19 +599,6 @@
 
 
     <script>
-        const ruleTexts = {
-            "Rule 23": "Rule 23 - Power-driven vessels underway:\n(a) A power-driven vessel underway shall exhibit:\n(i) a masthead light forward;\n(ii) a second masthead light abaft of and higher than the forward one;\n(iii) sidelights;\n(iv) a sternlight.",
-            "Rule 24(a)": "Rule 24 - Towing and pushing:\n(a) A power-driven vessel when towing shall exhibit:\n(i) instead of the light prescribed in Rule 23(a)(i) or (a)(ii), two masthead lights in a vertical line. When the length of the tow exceeds 200 meters, three such lights in a vertical line;\n(ii) sidelights;\n(iii) a sternlight;\n(iv) a towing light in a vertical line above the sternlight;\n(v) when the length of the tow exceeds 200 meters, a diamond shape where it can best be seen.",
-            "Rule 25": "Rule 25 - Sailing vessels underway and vessels under oars:\n(a) A sailing vessel underway shall exhibit:\n(i) sidelights;\n(ii) a sternlight.",
-            "Rule 26(b)": "Rule 26 - Fishing vessels:\n(b) A vessel when engaged in trawling, by which is meant the dragging through the water of a dredge net or other apparatus used as a fishing appliance, shall exhibit:\n(i) two all-round lights in a vertical line, the upper being green and the lower white, or a shape consisting of two cones with their apexes together in a vertical line;\n(ii) a masthead light abaft of and higher than the all-round green light; a vessel of less than 50 meters in length shall not be obliged to exhibit such a light but may do so;\n(iii) when making way through the water, in addition to the lights prescribed in this paragraph, sidelights and a sternlight.",
-            "Rule 26(c)": "Rule 26 - Fishing vessels:\n(c) A vessel engaged in fishing, other than trawling, shall exhibit:\n(i) two all-round lights in a vertical line, the upper being red and the lower white, or a shape consisting of two cones with apexes together in a vertical line;\n(ii) when there is outlying gear extending more than 150 meters horizontally from the vessel, an all-round white light or a cone apex upwards in the direction of the gear;\n(iii) when making way through the water, in addition to the lights prescribed in this paragraph, sidelights and a sternlight.",
-            "Rule 27(a)": "Rule 27 - Vessels not under command or restricted in their ability to maneuver:\n(a) A vessel not under command shall exhibit:\n(i) two all-round red lights in a vertical line where they can best be seen;\n(ii) two balls or similar shapes in a vertical line where they can best be seen;\n(iii) when making way through the water, in addition to the lights prescribed in this paragraph, sidelights and a sternlight.",
-            "Rule 27(b)": "Rule 27 - Vessels not under command or restricted in their ability to maneuver:\n(b) A vessel restricted in her ability to maneuver, except a vessel engaged in mineclearance operations, shall exhibit:\n(i) three all-round lights in a vertical line where they can best be seen. The highest and lowest of these lights shall be red and the middle light shall be white;\n(ii) three shapes in a vertical line where they can best be seen. The highest and lowest of these shapes shall be balls and the middle one a diamond;\n(iii) when making way through the water, a masthead light or lights, sidelights and a sternlight, in addition to the lights prescribed in subparagraph (i);\n(iv) when at anchor, in addition to the lights or shapes prescribed in subparagraphs (i) and (ii), the light, lights or shape prescribed in Rule 30.",
-            "Rule 28": "Rule 28 - Vessels constrained by their draught:\nA vessel constrained by her draught may, in addition to the lights prescribed for power-driven vessels in Rule 23, exhibit where they can best be seen three all-round red lights in a vertical line, or a cylinder.",
-            "Rule 29": "Rule 29 - Pilot vessels:\n(a) A vessel engaged on pilotage duty shall exhibit:\n(i) at or near the masthead, two all-round lights in a vertical line, the upper being white and the lower red;\n(ii) when underway, in addition, sidelights and a sternlight;\n(iii) when at anchor, in addition to the lights prescribed in subparagraph (i), the light, lights or shape prescribed in Rule 30 for vessels at anchor.",
-            "Rule 30": "Rule 30 - Anchored vessels and vessels aground:\n(a) A vessel at anchor shall exhibit where it can best be seen:\n(i) in the fore part, an all-round white light or one ball;\n(ii) at or near the stern and at a lower level than the light forward, an all-round white light."
-        };
-
         let currentSet = null; 
         let loadedDecks = [];
         let loadedCards = [];
@@ -655,7 +644,7 @@
                 const inputEl = searchContainer.querySelector('input');
                 inputEl.addEventListener('focus', () => inputEl.style.borderColor = 'var(--accent-cyan)');
                 inputEl.addEventListener('blur', () => inputEl.style.borderColor = 'var(--panel-border)');
-                inputEl.addEventListener('input', handleGlobalSearch);
+                inputEl.addEventListener('input', debounce(handleGlobalSearch, 300));
             }
         });
 
@@ -749,7 +738,17 @@
                 container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);"><p style="font-size: 0.8rem;">This deck contains no cards.</p></div>`;
                 return;
             }
-            deckCards.forEach(card => { container.innerHTML += buildCardHtml(card, ''); });
+           // Create an array to hold all the HTML strings
+            const allCardsHtml = [];
+
+            // Push each card's HTML into the array memory
+            const cardArray = typeof deckCards !== 'undefined' ? deckCards : deckSet;
+            cardArray.forEach(card => { 
+                allCardsHtml.push(buildCardHtml(card, '')); 
+            });
+
+            // Update the DOM exactly once
+            container.innerHTML = allCardsHtml.join('');
         }
 
         function showRuleText(event, ruleName) {
@@ -1076,6 +1075,15 @@
             }
         }
 
+        // Creates a delay so functions don't fire on every single keystroke
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
         function handleGlobalSearch(e) {
             const query = e.target.value.toLowerCase().trim();
             const container = document.querySelector('#app-ror #study-cards-grid');
@@ -1310,25 +1318,25 @@
                         }
                     });
     
-    // Close the invisible wrapper
-    lightsMarkup += `</div>`;
-    
-    // Turn the main canvas into a flex container to perfectly center the wrapper
-    rorCanvasFront.style.display = 'flex';
-    rorCanvasFront.style.alignItems = 'center';
-    rorCanvasFront.style.justifyContent = 'center';
-    rorCanvasFront.innerHTML = lightsMarkup;
-} else {
-    // 2. Standard Flashcard Rendering
-    frontTextEl.classList.remove('hidden');
-    rorCanvasFront.classList.add('hidden');
-    rorCanvasFront.style.display = ''; // Reset display for normal text cards
-    rorCanvasFront.innerHTML = '';
-    frontTextEl.innerHTML = marked.parse(currentCard.frontText || "");
-}
+                    // Close the invisible wrapper
+                    lightsMarkup += `</div>`;
+                    
+                    // Turn the main canvas into a flex container to perfectly center the wrapper
+                    rorCanvasFront.style.display = 'flex';
+                    rorCanvasFront.style.alignItems = 'center';
+                    rorCanvasFront.style.justifyContent = 'center';
+                    rorCanvasFront.innerHTML = lightsMarkup;
+                } else {
+                    // 2. Standard Flashcard Rendering
+                    frontTextEl.classList.remove('hidden');
+                    rorCanvasFront.classList.add('hidden');
+                    rorCanvasFront.style.display = ''; // Reset display for normal text cards
+                    rorCanvasFront.innerHTML = '';
+                    frontTextEl.innerHTML = DOMPurify.sanitize(marked.parse(currentCard.frontText || ""));
+                }
 
-// Back side always uses standard text rendering
-document.querySelector('#app-flashcard #view-back-text').innerHTML = marked.parse(currentCard.backText || "");
+                // Back side always uses standard text rendering
+                document.querySelector('#app-flashcard #view-back-text').innerHTML = DOMPurify.sanitize(marked.parse(currentCard.backText || ""));
 
                 toggleImageEl2('view-front-img', currentCard.frontImg);
                 toggleImageEl2('view-back-img', currentCard.backImg);
