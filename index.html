@@ -851,10 +851,13 @@
 
                     // Case 1: JSON has deck metadata (Native ROR Export)
                     if (data.deck && data.deck.name) {
-                        const createNewDeck = confirm(`Create a new deck called "${data.deck.name}"?\n\nOK = New Deck\nCancel = Import into current deck`);
+                        let finalName = data.deck.name;
+                        if (!finalName.startsWith("⚓ ROR:")) finalName = "⚓ ROR: " + finalName;
+
+                        const createNewDeck = confirm(`Create a new deck called "${finalName}"?\n\nOK = New Deck\nCancel = Import into current deck`);
                         if (createNewDeck || loadedDecks.length === 0) {
                             targetDeckId = "deck_" + Date.now();
-                            loadedDecks.push({ id: targetDeckId, name: data.deck.name, custom: true });
+                            loadedDecks.push({ id: targetDeckId, name: finalName, custom: true });
                         } else {
                             targetDeckId = currentSet;
                         }
@@ -864,8 +867,13 @@
                         const createNewDeck = confirm(`This file is missing deck metadata. Create a new deck named "${fileNameWithoutExt}"?\n\nOK = New Deck\nCancel = Import into current deck`);
                         if (createNewDeck || loadedDecks.length === 0) {
                             targetDeckId = "deck_" + Date.now();
-                            const userName = prompt("Name your new deck:", fileNameWithoutExt);
-                            loadedDecks.push({ id: targetDeckId, name: userName ? userName.trim() : fileNameWithoutExt, custom: true });
+                            let userName = prompt("Name your new deck:", fileNameWithoutExt);
+                            let finalName = userName ? userName.trim() : fileNameWithoutExt;
+                            
+                            // Ensure prefix is added
+                            if (!finalName.startsWith("⚓ ROR:")) finalName = "⚓ ROR: " + finalName;
+                            
+                            loadedDecks.push({ id: targetDeckId, name: finalName, custom: true });
                         } else {
                             targetDeckId = currentSet;
                         }
@@ -1445,12 +1453,24 @@
                             throw new Error("Unrecognized JSON format");
                         }
 
-                        if(cardsToImport.length > 0) {
-                            const name = prompt("Name your newly imported deck profile:", defaultName);
+                            if(cardsToImport.length > 0) {
+                            // Suggest a name that already has the prefix
+                            let suggestedName = defaultName;
+                            if (!suggestedName.startsWith("⚓ ROR:")) {
+                                suggestedName = "⚓ ROR: " + suggestedName;
+                            }
+
+                            let name = prompt("Name your newly imported deck profile:", suggestedName);
                             if(!name) return;
                             
+                            // Ensure the user didn't accidentally delete the prefix while typing
+                            let finalName = name.trim();
+                            if (!finalName.startsWith("⚓ ROR:")) {
+                                finalName = "⚓ ROR: " + finalName;
+                            }
+
                             const id = "deck_" + Date.now(); 
-                            fcVault.decks[id] = { name: name.trim(), cards: cardsToImport }; 
+                            fcVault.decks[id] = { name: finalName, cards: cardsToImport }; 
                             fcVault.activeDeckId = id;
                             
                             saveVaultToStorage2(); 
