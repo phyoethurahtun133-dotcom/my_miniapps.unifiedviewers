@@ -476,7 +476,13 @@
         <header class="bg-indigo-600 text-white shadow-md py-3 px-4 mb-8">
             <div class="max-w-3xl mx-auto flex justify-between items-center pr-24">
                 <h1 class="text-xl font-bold tracking-tight flex items-center gap-2">🎓 Flashcard Player</h1>
-                <button id="theme-toggle" class="bg-indigo-700 hover:bg-indigo-800 p-2 rounded-xl text-xs font-bold px-3 transition">🌙 Dark Mode</button>
+                 <div class="flex flex-wrap items-center justify-center gap-3">
+                    <button id="theme-toggle" class="bg-indigo-700 hover:bg-indigo-800 p-2 rounded-xl text-xs font-bold px-3 transition">🌙 Dark Mode</button>
+                    <label for="import-deck-file" class="bg-indigo-500 hover:bg-indigo-400 text-white font-medium text-xs px-3 py-2 rounded-lg border border-indigo-400 transition cursor-pointer">
+                        📤 Import JSON Deck
+                    </label>
+                    <input type="file" id="import-deck-file" accept=".json" class="hidden">
+                </div>
             </div>
         </header>
 
@@ -498,13 +504,13 @@
                         </button>
                     </div>
                 </div>
-                
-                <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+
+                <!-- <div class="flex flex-wrap gap-2 w-full sm:w-auto">
                     <label for="import-deck-file" class="flex-1 sm:flex-none text-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs px-5 py-3 rounded-xl border border-indigo-200 transition cursor-pointer shadow-sm">
                         📤 Import JSON Deck
                     </label>
                     <input type="file" id="import-deck-file" accept=".json" class="hidden">
-                </div>
+                </div> -->
             </div>
 
             <div id="quiz-area" class="space-y-6">
