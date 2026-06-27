@@ -2,6 +2,9 @@ const CACHE_NAME = 'ror-colregs-v1';
 const ASSETS_TO_CACHE = [
   'index.html',
   'manifest-viewer.json',
+  '/assets/icons/icon.svg',
+  '/assets/icons/icon-512.png',
+  '/assets/icons/icon-maskable.svg'
 ];
 
 // Install Event - Pre-caches the app files
