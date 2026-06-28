@@ -528,27 +528,27 @@
                 <div class="perspective-1000 w-full h-[450px] group mx-auto">
                     <div id="flashcard" class="w-full h-full relative transform-style-3d transition-transform duration-500 cursor-pointer select-none rounded-2xl shadow-md border border-gray-200/60">
                         <div class="absolute inset-0 backface-hidden bg-white rounded-2xl p-3 flex flex-col justify-between items-start text-left">
-                            <div class="w-full flex justify-between items-center mb-2">
+                            <div class="w-full flex justify-between items-center mb-2 shrink-0">
                                 <span class="text-xs font-bold uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2.5 py-1 rounded-md">Front (Question)</span>
                                 <button id="tts-front" class="bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-gray-200 text-xs font-bold px-2.5 py-1 rounded-lg transition">🔊 Speak</button>
                             </div>
-                            <div class="flex-1 w-full flex flex-col justify-center items-center gap-3 my-1 relative overflow-y-auto card-scrollbar pr-2">
+                            <div class="flex-1 min-h-0 w-full flex flex-col justify-start items-center gap-3 my-1 relative overflow-y-auto card-scrollbar pr-2">
                                 <div id="view-front-ror-canvas" class="hidden relative bg-[#020203] rounded-xl border-4 border-[#f59e0b] mx-auto shadow-inner overflow-hidden flex-shrink-0" style="width: 200px; height: 260px;"></div>                                    
                                 <img id="view-front-img" src="" class="hidden max-h-64 w-auto flex-shrink-0 object-contain rounded-lg max-w-full" alt="Front Illustration">
                                 <div id="view-front-text" class="markdown-body w-full text-base sm:text-lg font-semibold text-gray-800 text-left"></div>
                             </div>
-                            <span class="text-xs text-gray-400 italic self-center mt-2">💡 Click anywhere on the card to flip</span>
+                            <span class="text-xs text-gray-400 italic self-center mt-2 shrink-0">💡 Click anywhere on the card to flip</span>
                         </div>
                         <div class="absolute inset-0 backface-hidden rotate-y-180 bg-indigo-900 rounded-2xl p-3 flex flex-col justify-between items-start text-left text-white">
-                            <div class="w-full flex justify-between items-center mb-2">
+                            <div class="w-full flex justify-between items-center mb-2 shrink-0">
                                 <span class="text-xs font-bold uppercase tracking-widest text-indigo-300 bg-indigo-950/50 px-2.5 py-1 rounded-md">Back (Answer)</span>
                                 <button id="tts-back" class="bg-indigo-950/50 hover:bg-indigo-950 text-indigo-200 text-xs font-bold px-2.5 py-1 rounded-lg transition">🔊 Speak</button>
                             </div>
-                            <div class="flex-1 w-full flex flex-col justify-center items-center gap-3 my-1 overflow-y-auto card-scrollbar pr-2">
+                            <div class="flex-1 min-h-0 w-full flex flex-col justify-start items-center gap-3 my-1 overflow-y-auto card-scrollbar pr-2">
                                 <img id="view-back-img" src="" class="hidden max-h-64 w-auto flex-shrink-0 object-contain rounded-lg max-w-full" alt="Back Illustration">
                                 <div id="view-back-text" class="markdown-body w-full text-base sm:text-lg font-medium text-indigo-100 text-left"></div>
                             </div>
-                            <span class="text-xs text-indigo-300/70 italic self-center mt-2">🔄 Click again to flip back</span>
+                            <span class="text-xs text-indigo-300/70 italic self-center mt-2 shrink-0">🔄 Click again to flip back</span>
                         </div>
                     </div>
                 </div>
