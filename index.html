@@ -1352,7 +1352,9 @@
                     .replace(/[\*\`\#\-\_\>]/g, "")
                     .replace(/\//g, ", ")
                     // 4. Wipe out extra whitespace or double-spaces caused by the replacement
-                    .replace(/\s\s+/g, ' ');
+                    .replace(/\s\s+/g, ' ')
+                    // Replace colons and semicolons with commas for natural pauses
+                    .replace(/[:;]/g, ", ");
 
                 // Apply the custom JSON dictionary replacements
                 for (const [abbreviation, properPronunciation] of Object.entries(customPronunciations)) {
@@ -1362,13 +1364,15 @@
 
                 // 3. Hand the completely transformed text over to Google Speech
                 const utterance = new SpeechSynthesisUtterance(cleanText.trim());
-                utterance.rate = 1.0; 
+                utterance.rate = 0.9; 
                 utterance.pitch = 1.0;
 
                 // Find the voice object based on the user's selection
                 const selectedVoiceName = voiceSelector.selectedOptions[0].getAttribute('data-name');
                 const allVoices = window.speechSynthesis.getVoices();
+                if (selectedVoiceName) {
                 utterance.voice = allVoices.find(v => v.name === selectedVoiceName);
+                }
 
                 window.speechSynthesis.speak(utterance);
             }
