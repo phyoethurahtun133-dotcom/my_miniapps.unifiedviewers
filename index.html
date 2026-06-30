@@ -23,6 +23,22 @@
             name: 'UnifiedLearningHub_SharedDB',
             storeName: 'shared_hub_data'
         });
+
+        let customPronunciations = {};
+
+        fetch('pronunciations.json')
+            .then(response => {
+                if (!response.ok) throw new Error("Dictionary file not found");
+                return response.json();
+            })
+            .then(data => {
+                customPronunciations = data;
+                console.log("Pronunciation dictionary loaded successfully!", customPronunciations);
+            })
+            .catch(error => {
+                console.warn("Could not load custom pronunciations, falling back to default speech:", error);
+            });
+
         // ===== STORAGE KEYS =====
         const FLASHCARD_VAULT_KEY = 'shared_flashcard_vault';
 
@@ -260,6 +276,7 @@
         #app-flashcard .shape-cone-up { width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-bottom: 24px solid #0f172a; background: none; }
         #app-flashcard .shape-cone-down { width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 24px solid #0f172a; background: none; }
         #app-flashcard .shape-cylinder { width: 16px; height: 28px; background-color: #0f172a; border-radius: 2px; box-shadow: inset -3px 0 6px rgba(0,0,0,0.4); }
+        #voice-selector { text-overflow: ellipsis; white-space: nowrap; overflow: hidden;}
     </style>
     <style>
         body { margin: 0; padding: 0; transition: background-color 0.3s; }
@@ -530,6 +547,8 @@
                         <div class="absolute inset-0 backface-hidden bg-white rounded-2xl p-3 flex flex-col justify-between items-start text-left">
                             <div class="w-full flex justify-between items-center mb-2 shrink-0">
                                 <span class="text-xs font-bold uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2.5 py-1 rounded-md">Front (Question)</span>
+                                <label for="voice-selector" class="text-xs font-bold uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2.5 py-1 rounded-md">Choose Voice:</label>
+                                <select id="voice-selector" class="w-48 max-w-full p-2 border border-gray-300 rounded" onclick="event.stopPropagation()"></select>
                                 <button id="tts-front" class="bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-gray-200 text-xs font-bold px-2.5 py-1 rounded-lg transition">🔊 Speak</button>
                             </div>
                             <div class="flex-1 min-h-0 w-full flex flex-col justify-start items-center gap-3 my-1 relative overflow-y-auto card-scrollbar pr-2">
@@ -1298,11 +1317,61 @@
                 startQuizSession2(fcQuizDeck);
             }
 
-            function speakText2(rawText) {
-                if (!rawText) return; window.speechSynthesis.cancel();
-                const cleanText = rawText.replace(/[\*\`\#\-\_\>]/g, "").replace(/<br>/g, " ");
-                window.speechSynthesis.speak(new SpeechSynthesisUtterance(cleanText));
+            const voiceSelector = document.getElementById('voice-selector');
+
+            // Function to populate the dropdown
+            function loadVoices() {
+                const voices = window.speechSynthesis.getVoices();
+                voiceSelector.innerHTML = ''; // Clear existing
+                
+                voices.forEach((voice) => {
+                    const option = document.createElement('option');
+                    option.textContent = `${voice.name} (${voice.lang})`;
+                    option.setAttribute('data-name', voice.name);
+                    voiceSelector.appendChild(option);
+                });
             }
+
+            // Ensure voices are loaded (browsers load them asynchronously)
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = loadVoices;
+            }
+            loadVoices();
+
+            function speakText2(rawText) {
+                if (!rawText) return; 
+
+                window.speechSynthesis.cancel(); 
+
+                let cleanText = rawText
+                    // 1. Convert HTML line breaks (<br>, <br/>) to commas for natural pauses
+                    .replace(/<br\s*[\/]?>/gi, ", ")
+                    // 2. Convert raw keyboard Enter hits (\r, \n) to commas
+                    .replace(/[\r\n]+/g, ", ")
+                    // 3. Remove Markdown symbols (*, `, #, -, _, >) so they aren't spoken
+                    .replace(/[\*\`\#\-\_\>]/g, "")
+                    // 4. Wipe out extra whitespace or double-spaces caused by the replacement
+                    .replace(/\s\s+/g, ' ');
+
+                // Apply the custom JSON dictionary replacements
+                for (const [abbreviation, properPronunciation] of Object.entries(customPronunciations)) {
+                    const regex = new RegExp(`\\b${abbreviation}\\b`, 'gi');
+                    cleanText = cleanText.replace(regex, properPronunciation);
+                }
+
+                // 3. Hand the completely transformed text over to Google Speech
+                const utterance = new SpeechSynthesisUtterance(cleanText.trim());
+                utterance.rate = 1.0; 
+                utterance.pitch = 1.0;
+
+                // Find the voice object based on the user's selection
+                const selectedVoiceName = voiceSelector.selectedOptions[0].getAttribute('data-name');
+                const allVoices = window.speechSynthesis.getVoices();
+                utterance.voice = allVoices.find(v => v.name === selectedVoiceName);
+
+                window.speechSynthesis.speak(utterance);
+            }
+
 
             function toggleCardFlip2() {
                 if (fcQuizDeck.length === 0) return;
