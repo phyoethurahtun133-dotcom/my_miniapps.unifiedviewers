@@ -1432,6 +1432,7 @@
                 .replace(/[\*\`\#\-\_\>]/g, "")
                 .replace(/\//g, ", ")
                 .replace(/\s\s+/g, ' ')
+                .replace(/[-_]/g, ", ")
                 .replace(/[:;]/g, ", ");
 
             // Safety guard in case customPronunciations is declared elsewhere or out of scope
