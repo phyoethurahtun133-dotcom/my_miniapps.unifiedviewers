@@ -1350,6 +1350,7 @@
                     .replace(/[\r\n]+/g, ", ")
                     // 3. Remove Markdown symbols (*, `, #, -, _, >) so they aren't spoken
                     .replace(/[\*\`\#\-\_\>]/g, "")
+                    .replace(/\//g, ", ")
                     // 4. Wipe out extra whitespace or double-spaces caused by the replacement
                     .replace(/\s\s+/g, ' ');
 
