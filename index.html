@@ -1317,7 +1317,7 @@
                 startQuizSession2(fcQuizDeck);
             }
 
-                  const voiceSelector = document.getElementById('voice-selector');
+            const voiceSelector = document.getElementById('voice-selector');
         let voicesLoaded = false;
 
         // Function to safely populate the dropdown
@@ -1462,6 +1462,7 @@
             window.speechSynthesis.speak(utterance);
         }
 
+
             function toggleCardFlip2() {
                 if (fcQuizDeck.length === 0) return;
                 fcIsFlipped = !fcIsFlipped;
@@ -1597,42 +1598,61 @@
                         let defaultName = "Imported Deck";
 
                         // DETECT ROR FORMAT: Has 'deck' and 'cards' properties
+                        // Deck-style JSON (ROR or Native Flashcard)
                         if (parsed.deck && parsed.cards) {
-                            defaultName = parsed.deck.name || "ROR Export Deck";
-                            
-                            // Translate ROR data into Flashcard data format
-                            cardsToImport = parsed.cards.map(c => {
-                                const parts = [];
-                                if (c.title) parts.push(`Vessel: ${c.title}`);
-                                if (c.length) parts.push(`Length: ${c.length}`);
-                                if (c.vesselFunction) parts.push(`Function: ${c.vesselFunction}`);
-                                if (c.status) parts.push(`Status: ${c.status}`);
-                                if (c.aspect) parts.push(`Aspect: ${c.aspect}`);
-                                if (c.daySignal) parts.push(`Day Signal: ${c.daySignal}`);
-                                if (c.soundSignal) parts.push(`Sound Signal: ${c.soundSignal}`);
-                                if (c.rule) parts.push(`Rule: ${c.rule}`);
-                                if (c.action) parts.push(`Action: ${c.action}`);
 
-                                return {
-                                    frontText: "",
-                                    rawRorData: c, 
-                                    rorLights: c.lights || [],
-                                    backText: parts.join('\n\n'),
-                                    frontImg: "",
-                                    backImg: ""
-                                };
-                            });
-                        } 
-                        // DETECT NATIVE FLASHCARD FORMAT: Pure Array
-                        else if (Array.isArray(parsed)) {
-                            cardsToImport = parsed;
-                        } else if (parsed && Array.isArray(parsed.cards)) {
-                            cardsToImport = parsed.cards;
-                            if (parsed.deck && parsed.deck.name) {
-                                defaultName = parsed.deck.name;
+                            // Native Flashcard export (Version 2)
+                            if (parsed.type === "FlashcardDeck") {
+
+                                defaultName = parsed.deck.name || "Imported Deck";
+
+                                cardsToImport = parsed.cards;
+
                             }
-                        } else {
+
+                            // Otherwise assume ROR export
+                            else {
+
+                                defaultName = parsed.deck.name || "ROR Export Deck";
+
+                                cardsToImport = parsed.cards.map(c => {
+
+                                    const parts = [];
+
+                                    if (c.title) parts.push(`Vessel: ${c.title}`);
+                                    if (c.length) parts.push(`Length: ${c.length}`);
+                                    if (c.vesselFunction) parts.push(`Function: ${c.vesselFunction}`);
+                                    if (c.status) parts.push(`Status: ${c.status}`);
+                                    if (c.aspect) parts.push(`Aspect: ${c.aspect}`);
+                                    if (c.daySignal) parts.push(`Day Signal: ${c.daySignal}`);
+                                    if (c.soundSignal) parts.push(`Sound Signal: ${c.soundSignal}`);
+                                    if (c.rule) parts.push(`Rule: ${c.rule}`);
+                                    if (c.action) parts.push(`Action: ${c.action}`);
+
+                                    return {
+                                        frontText: "",
+                                        rawRorData: c,
+                                        rorLights: c.lights || [],
+                                        backText: parts.join("\n\n"),
+                                        frontImg: "",
+                                        backImg: ""
+                                    };
+
+                                });
+
+                            }
+
+                        }
+                        // Legacy Flashcard export (Version 1)
+                        else if (Array.isArray(parsed)) {
+
+                            cardsToImport = parsed;
+
+                        }
+                        else {
+
                             throw new Error("Unrecognized JSON format");
+
                         }
 
                             if(cardsToImport.length > 0) {
