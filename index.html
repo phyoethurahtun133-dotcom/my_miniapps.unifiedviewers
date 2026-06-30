@@ -1317,143 +1317,150 @@
                 startQuizSession2(fcQuizDeck);
             }
 
-            const voiceSelector = document.getElementById('voice-selector');
-            let voicesLoaded = false;
+                  const voiceSelector = document.getElementById('voice-selector');
+        let voicesLoaded = false;
 
-            // Function to safely populate the dropdown
-            function loadVoices() {
-                if (typeof speechSynthesis === 'undefined') return;
-                
-                const voices = window.speechSynthesis.getVoices();
-                
-                // Guard clause: If no voices exist yet, OR if we already loaded them, do nothing
-                if (!voices || voices.length === 0) return;
-                if (voicesLoaded && voiceSelector.options.length > 1) return;
-                
-                // Remember what the user had selected before clearing
-                const currentSelection = voiceSelector.value;
-                
-                voiceSelector.innerHTML = ''; // Safely clear now
-                
-                voices.forEach((voice) => {
-                    const option = document.createElement('option');
-                    option.textContent = `${voice.name} (${voice.lang})`;
-                    option.value = voice.name;
-                    option.setAttribute('data-name', voice.name);
-                    voiceSelector.appendChild(option);
-                });
+        // Function to safely populate the dropdown
+        function loadVoices() {
+            if (typeof speechSynthesis === 'undefined') return;
+            
+            const voices = window.speechSynthesis.getVoices();
+            
+            // Guard clause: If no voices exist yet, OR if we already loaded them, do nothing
+            if (!voices || voices.length === 0) return;
+            if (voicesLoaded && voiceSelector.options.length > 1) return;
+            
+            // Look for a previously saved voice in localStorage, fallback to current dropdown state
+            const savedVoice = localStorage.getItem('preferredVoice');
+            const currentSelection = voiceSelector.value || savedVoice;
+            
+            voiceSelector.innerHTML = ''; // Safely clear now
+            
+            voices.forEach((voice) => {
+                const option = document.createElement('option');
+                option.textContent = `${voice.name} (${voice.lang})`;
+                option.value = voice.name;
+                option.setAttribute('data-name', voice.name);
+                voiceSelector.appendChild(option);
+            });
 
-                // Restore previous selection if it's still available
-                if (currentSelection) {
-                    voiceSelector.value = currentSelection;
-                }
-                
-                voicesLoaded = true;
-            }
-
-            // 1. Standard desktop event handler
-            if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
-                speechSynthesis.onvoiceschanged = () => {
-                    voicesLoaded = false; // Reset flag to allow update if browser voices change
-                    loadVoices();
-                };
+            // Restore previous selection or the permanently saved setting
+            if (currentSelection) {
+                voiceSelector.value = currentSelection;
             }
             
-            // 2. Safe Lifecycle Initialization (Works regardless of script placement)
-            function initVoices() {
+            voicesLoaded = true;
+        }
+
+        // NEW: Listen for manual user changes and save their preference permanently
+        voiceSelector.addEventListener('change', () => {
+            if (voiceSelector.value) {
+                localStorage.setItem('preferredVoice', voiceSelector.value);
+            }
+        });
+
+        // 1. Standard desktop event handler
+        if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = () => {
+                voicesLoaded = false; // Reset flag to allow update if browser voices change
                 loadVoices();
-                // Polling safety loop for lazy mobile engines
-                let attempts = 0;
-                let mobileVoiceCheck = setInterval(() => {
-                    attempts++;
-                    const voices = window.speechSynthesis.getVoices();
-                    if (voices && voices.length > 0) {
-                        loadVoices();
-                        clearInterval(mobileVoiceCheck);
-                    }
-                    if (attempts > 10) clearInterval(mobileVoiceCheck); // Stop checking after 5s
-                }, 500);
-            }
-
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initVoices);
-            } else {
-                initVoices();
-            }
-
-            // 3. SAFE Interaction Fallback: ONLY fire if the dropdown failed to load initially
-            const loadVoicesOnDemand = () => {
-                if (voiceSelector.options.length <= 1 || !voicesLoaded) {
-                    loadVoices();
-                }
             };
-            voiceSelector.addEventListener('click', loadVoicesOnDemand);
-            voiceSelector.addEventListener('touchstart', loadVoicesOnDemand, { passive: true });
+        }
+        
+        // 2. Safe Lifecycle Initialization (Works regardless of script placement)
+        function initVoices() {
+            loadVoices();
+            // Polling safety loop for lazy mobile engines
+            let attempts = 0;
+            let mobileVoiceCheck = setInterval(() => {
+                attempts++;
+                const voices = window.speechSynthesis.getVoices();
+                if (voices && voices.length > 0) {
+                    loadVoices();
+                    clearInterval(mobileVoiceCheck);
+                }
+                if (attempts > 10) clearInterval(mobileVoiceCheck); // Stop checking after 5s
+            }, 500);
+        }
 
-            // Global flag to track if mobile speech engine is unlocked
-            let speechUnlocked = false;
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initVoices);
+        } else {
+            initVoices();
+        }
 
-            function unlockMobileSpeech() {
-                if (speechUnlocked || typeof speechSynthesis === 'undefined') return;
+        // 3. SAFE Interaction Fallback: ONLY fire if the dropdown failed to load initially
+        const loadVoicesOnDemand = () => {
+            if (voiceSelector.options.length <= 1 || !voicesLoaded) {
+                loadVoices();
+            }
+        };
+        voiceSelector.addEventListener('click', loadVoicesOnDemand);
+        voiceSelector.addEventListener('touchstart', loadVoicesOnDemand, { passive: true });
 
-                // Speak a completely silent, empty utterance to trick the mobile engine
-                const silentUtterance = new SpeechSynthesisUtterance(' ');
-                silentUtterance.volume = 0;
-                window.speechSynthesis.speak(silentUtterance);
-                
-                speechUnlocked = true;
+        // Global flag to track if mobile speech engine is unlocked
+        let speechUnlocked = false;
 
-                // Clean up event listeners once unlocked
-                document.removeEventListener('touchstart', unlockMobileSpeech);
-                document.removeEventListener('click', unlockMobileSpeech);
+        function unlockMobileSpeech() {
+            if (speechUnlocked || typeof speechSynthesis === 'undefined') return;
+
+            // Speak a completely silent, empty utterance to trick the mobile engine
+            const silentUtterance = new SpeechSynthesisUtterance(' ');
+            silentUtterance.volume = 0;
+            window.speechSynthesis.speak(silentUtterance);
+            
+            speechUnlocked = true;
+
+            // Clean up event listeners once unlocked
+            document.removeEventListener('touchstart', unlockMobileSpeech);
+            document.removeEventListener('click', unlockMobileSpeech);
+        }
+
+        // Attach the unlocker to the very first touch/click anywhere on the page
+        document.addEventListener('touchstart', unlockMobileSpeech, { passive: true });
+        document.addEventListener('click', unlockMobileSpeech);
+
+
+        function speakText2(rawText) {
+            if (!rawText || typeof speechSynthesis === 'undefined') return; 
+
+            window.speechSynthesis.cancel(); 
+
+            let cleanText = rawText
+                .replace(/<br\s*[\/]?>/gi, ", ")
+                .replace(/[\r\n]+/g, ", ")
+                .replace(/[\*\`\#\-\_\>]/g, "")
+                .replace(/\//g, ", ")
+                .replace(/\s\s+/g, ' ')
+                .replace(/[:;]/g, ", ");
+
+            // Safety guard in case customPronunciations is declared elsewhere or out of scope
+            if (typeof customPronunciations !== 'undefined') {
+                for (const [abbreviation, properPronunciation] of Object.entries(customPronunciations)) {
+                    const regex = new RegExp(`\\b${abbreviation}\\b`, 'gi');
+                    cleanText = cleanText.replace(regex, properPronunciation);
+                }
             }
 
-            // Attach the unlocker to the very first touch/click anywhere on the page
-            document.addEventListener('touchstart', unlockMobileSpeech, { passive: true });
-            document.addEventListener('click', unlockMobileSpeech);
+            const utterance = new SpeechSynthesisUtterance(cleanText.trim());
+            utterance.rate = 0.9; 
+            utterance.pitch = 1.0;
 
-
-            function speakText2(rawText) {
-                if (!rawText || typeof speechSynthesis === 'undefined') return; 
-
-                window.speechSynthesis.cancel(); 
-
-                let cleanText = rawText
-                    .replace(/<br\s*[\/]?>/gi, ", ")
-                    .replace(/[\r\n]+/g, ", ")
-                    .replace(/[\*\`\#\-\_\>]/g, "")
-                    .replace(/\//g, ", ")
-                    .replace(/\s\s+/g, ' ')
-                    .replace(/[:;]/g, ", ");
-
-                // Safety guard in case customPronunciations is declared elsewhere or out of scope
-                if (typeof customPronunciations !== 'undefined') {
-                    for (const [abbreviation, properPronunciation] of Object.entries(customPronunciations)) {
-                        const regex = new RegExp(`\\b${abbreviation}\\b`, 'gi');
-                        cleanText = cleanText.replace(regex, properPronunciation);
-                    }
-                }
-
-                const utterance = new SpeechSynthesisUtterance(cleanText.trim());
-                utterance.rate = 0.9; 
-                utterance.pitch = 1.0;
-
-                // Robust voice matching
-                const selectedOption = voiceSelector.selectedOptions ? voiceSelector.selectedOptions[0] : null;
-                const selectedVoiceName = selectedOption ? (selectedOption.getAttribute('data-name') || voiceSelector.value) : null;
-                const allVoices = window.speechSynthesis.getVoices();
-                
-                if (selectedVoiceName && allVoices.length > 0) {
-                    const matchedVoice = allVoices.find(v => v.name === selectedVoiceName);
-                    if (matchedVoice) {
+            // Robust voice matching
+            const selectedOption = voiceSelector.selectedOptions ? voiceSelector.selectedOptions[0] : null;
+            const selectedVoiceName = selectedOption ? (selectedOption.getAttribute('data-name') || voiceSelector.value) : null;
+            const allVoices = window.speechSynthesis.getVoices();
+            
+            if (selectedVoiceName && allVoices.length > 0) {
+                const matchedVoice = allVoices.find(v => v.name === selectedVoiceName);
+                if (matchedVoice) {
                     utterance.voice = matchedVoice;
-                    utterance.lang = matchedVoice.lang; // <-- FIXED: Force mobile browser to sync the language engine to this voice
-                    }
+                    utterance.lang = matchedVoice.lang; // Force mobile browser to sync the language engine to this voice
                 }
-
-                window.speechSynthesis.speak(utterance);
             }
 
+            window.speechSynthesis.speak(utterance);
+        }
 
             function toggleCardFlip2() {
                 if (fcQuizDeck.length === 0) return;
